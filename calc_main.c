@@ -99,6 +99,7 @@ void free_hand(Hand* hand) {
 }
 
 pocket_type get_pocket_type(const char* pocket) {
+  printf("strlen: %d\n", (int)strlen(pocket));
   if (strlen(pocket) == 4) {
     if (strchr("shdc", pocket[1]) != NULL) {
       if (strchr("shdc", pocket[3]) != NULL) {
@@ -128,14 +129,20 @@ int extract_cards_singular(char* cards, Hand* hand, StdDeck_CardMask dead) {
   StdDeck_CardMask_RESET(pocket);
   int card;
 
-  if (DstringToCard(StdDeck, cards, &card) == 0)
+  if (DstringToCard(StdDeck, cards, &card) == 0) {
+    printf("R1: parsing card1 failed\n");
     return 0;
+  }
   StdDeck_CardMask_SET(pocket, card);
-  if (DstringToCard(StdDeck, cards+2, &card) == 0)
+  if (DstringToCard(StdDeck, cards+2, &card) == 0) {
+    printf("R1: parsing card2 failed\n");
     return 0;
+  }
   StdDeck_CardMask_SET(pocket, card);
-  if (StdDeck_CardMask_ANY_SET(dead, pocket)) /* cards already seen */
+  if (StdDeck_CardMask_ANY_SET(dead, pocket)) {
+    printf("R1: in dead cards\n");
     return 1;
+  }
   insert(pocket, hand);
   return 1;
 }
@@ -160,11 +167,11 @@ int extract_cards_pair(char* cards, Hand* hand, StdDeck_CardMask dead) {
   }
 
   StdDeck_CardMask pocket;
-  StdDeck_CardMask_RESET(pocket);
   // enumerate all cards in range
   for (int rank=floor; rank <= ceil; rank++) {
     for(int suit1 = StdDeck_Suit_FIRST; suit1 <= StdDeck_Suit_LAST; suit1++) {
       for (int suit2 = suit1 + 1; suit2 <= StdDeck_Suit_LAST; suit2++) {
+        StdDeck_CardMask_RESET(pocket);
         StdDeck_CardMask_SET(pocket, StdDeck_MAKE_CARD(rank, suit1) );
         StdDeck_CardMask_SET(pocket, StdDeck_MAKE_CARD(rank, suit2) );
         if (!StdDeck_CardMask_ANY_SET(dead, pocket)) {
@@ -179,7 +186,9 @@ int extract_cards_pair(char* cards, Hand* hand, StdDeck_CardMask dead) {
 int parse_pocket(char* hand_text, Hand* hand, StdDeck_CardMask dead) {
   char *c = strtok(hand_text, ",");
   while (c != NULL) {
+    printf("here2: %s\n", c);
     pocket_type p = get_pocket_type(c);
+    printf("here3 %d\n", p);
     if (p == SINGULAR) {
       if (extract_cards_singular(c, hand, dead) == 0) {
         return 0;
@@ -210,5 +219,18 @@ int main(int argc, char **argv) {
     c = (ll_card*)c->next;
   }
   free_hand(hand);
+  hand = (Hand*)malloc(sizeof(Hand));
+  hand->dist_n = 0;
+  StdDeck_CardMask dead;
+  StdDeck_CardMask_RESET(dead);
+  if (parse_pocket(*(argv+1), hand, dead) == 1) {
+    printf("hhar: %d\n",hand->dist_n);
+    ll_card* c = hand->hand_dist;
+    for (int i=0; i<hand->dist_n; i++) {
+      DprintMask(StdDeck, c->cards);
+      printf("\n");
+      c = (ll_card*)c->next;
+    }
+  }
   return 0;
 }
