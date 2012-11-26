@@ -7,20 +7,21 @@
 #include "enumdefs.h"
 
 //#include "inlines\eval.h"
-
+typedef struct h_dist h_dist;
 // store distribution of pocket cards in ll
-typedef struct {
+typedef struct h_dist {
   StdDeck_CardMask cards;
-  void* next;
-  void* prev;
-} ll_card;
+  h_dist* next;
+  h_dist* prev;
+} Hand_Dist;
 
 typedef struct {
-  ll_card* hand_dist;
+  Hand_Dist* hand_dist;
   int dist_n;
 } Hand;
 
 typedef enum {
+  ERROR,
   SINGULAR,
   RAND,
   PAIR,
@@ -59,7 +60,7 @@ static int char2suit(char c) {
 }
 
 void insert(StdDeck_CardMask cards, Hand* hand) {
-  ll_card* new = (ll_card*)malloc(sizeof(ll_card));
+  Hand_Dist* new = (Hand_Dist*)malloc(sizeof(Hand_Dist));
   new->cards = cards;
   if (hand->dist_n < 1) {
     // first entry, needs to be self-referencing
@@ -67,19 +68,19 @@ void insert(StdDeck_CardMask cards, Hand* hand) {
     new->prev = new;
     hand->hand_dist = new;
   } else {
-    ll_card* cur = hand->hand_dist;
+    Hand_Dist* cur = hand->hand_dist;
     // ensure no duplicate entries
     for (int i=0; i<hand->dist_n; i++) {
       if (StdDeck_CardMask_EQUAL(cards, cur->cards)) {
         return;
       }
-      cur = (ll_card*)cur->next;
+      cur = cur->next;
     }
     // set my refs
     new->next = hand->hand_dist;
     new->prev = hand->hand_dist->prev;
     // update other refs
-    ((ll_card*)new->prev)->next = new;
+    new->prev->next = new;
     hand->hand_dist->prev = new;
   }
   // incr counter
@@ -87,10 +88,10 @@ void insert(StdDeck_CardMask cards, Hand* hand) {
 }
 
 void free_hand(Hand* hand) {
-  ll_card* next;
-  ll_card* cur = hand->hand_dist;
+  Hand_Dist* next;
+  Hand_Dist* cur = hand->hand_dist;
   for (int i=0; i<hand->dist_n; i++) {
-    next = (ll_card*)cur->next;
+    next = cur->next;
     //printf("freeing %d\n", next->cards);
     free(cur);
     cur = next;
@@ -100,28 +101,46 @@ void free_hand(Hand* hand) {
 
 pocket_type get_pocket_type(const char* pocket) {
   printf("strlen: %d\n", (int)strlen(pocket));
-  if (strlen(pocket) == 4) {
-    if (strchr("shdc", pocket[1]) != NULL) {
-      if (strchr("shdc", pocket[3]) != NULL) {
-        if (strchr("23456789TJQKA", pocket[0]) != NULL) {
-          if (strchr("23456789TJQKA", pocket[2]) != NULL) {
-            return SINGULAR;
-          }
-        }
-      }
+  if (strchr("x", tolower(pocket[0])) != NULL)
+    return RAND;
+  size_t n_p = strlen(pocket);
+  // filter out blatant errors in input
+  for (int i=0; i<n_p; i++) {
+    if (strchr("23456789TJQKA+-SHDCO", toupper(pocket[i])) == NULL)
+      return ERROR;
+  }
+  if (n_p < 2)
+    return ERROR;
+
+  if (n_p == 4) {
+    if (strchr("shdc", tolower(pocket[1])) != NULL &&
+        strchr("shdc", tolower(pocket[3])) != NULL &&
+        strchr("23456789TJQKA", toupper(pocket[2])) != NULL) {
+          return SINGULAR;
     }
   }
-  if (strcmp(pocket, "XxXx") == 0)
-    return RAND;
-  if (strlen(pocket) >= 2 && pocket[0] == pocket[1])
+  if (n_p >= 2 && pocket[0] == pocket[1])
     return PAIR;
-  if (strlen(pocket) >= 3) {
-    if (pocket[2] == 's')
-      return SUITED;
-    if (pocket[2] == 'o')
-      return OFFSUIT;
+  if (n_p >= 3) {
+    if (strchr("23456789TJQKA", toupper(pocket[1])) == NULL)
+      return ERROR;
+    if (n_p == 3 ||
+        (n_p == 4 && pocket[3] == '+') ||
+        (n_p == 7 && pocket[3] == '-' &&
+         strchr("23456789TJQKA", toupper(pocket[4])) != NULL &&
+         strchr("23456789TJQKA", toupper(pocket[5])) != NULL &&
+         pocket[2] == pocket[6])) {
+      if (pocket[2] == 's')
+        return SUITED;
+      if (pocket[2] == 'o')
+        return OFFSUIT;
+      return ERROR;
+    }
   }
-  return NONE;
+  if (n_p == 2)
+    return NONE;
+
+  return ERROR;
 }
 
 int extract_cards_singular(char* cards, Hand* hand, StdDeck_CardMask dead) {
@@ -158,12 +177,17 @@ int extract_cards_pair(char* cards, Hand* hand, StdDeck_CardMask dead) {
   int floor = char2rank(cards[0]);
   if (strchr(cards, '-') != NULL) {
     const char* index = strchr(cards, '-');
-    floor = char2rank(*(index+1));
+    if ((floor = char2rank(*(index+1))) < 0) {
+      return 0;
+    }
   } else if (strchr(cards, '+') != NULL) {
     ceil = StdDeck_Rank_ACE;
   }
-  if (floor < 0 || ceil < 0) {
-    return 0;
+  // if inverse range specified, just flip it
+  if (floor > ceil) {
+    int temp = floor;
+    floor = ceil;
+    ceil = temp;
   }
 
   StdDeck_CardMask pocket;
@@ -203,10 +227,6 @@ int extract_cards_offsuit(char* cards, Hand* hand, StdDeck_CardMask dead) {
   return 1;
 }
 
-int extract_cards_default(char* cards, Hand* hand, StdDeck_CardMask dead) {
-  return 1;
-}
-
 int parse_pocket(char* hand_text, Hand* hand, StdDeck_CardMask dead) {
   char *c = strtok(hand_text, ",");
   while (c != NULL) {
@@ -227,8 +247,11 @@ int parse_pocket(char* hand_text, Hand* hand, StdDeck_CardMask dead) {
       extract_cards_suited(c, hand, dead);
     } else if (p == OFFSUIT) {
       extract_cards_offsuit(c, hand, dead);
+    } else if (p == NONE) {
+      extract_cards_suited(c, hand, dead);
+      extract_cards_offsuit(c, hand, dead);
     } else {
-      extract_cards_default(c, hand, dead);
+      return 0;
     }
     c = strtok(NULL,",");
   }
@@ -244,11 +267,11 @@ int main(int argc, char **argv) {
   insert(StdDeck_MASK(0), hand);
   insert(StdDeck_MASK(5), hand);
   insert(StdDeck_MASK(6), hand);
-  ll_card* c = hand->hand_dist;
+  Hand_Dist* c = hand->hand_dist;
   for (int i=0; i<3; i++) {
     DprintMask(StdDeck, c->cards);
     printf("\n");
-    c = (ll_card*)c->next;
+    c = c->next;
   }
   free_hand(hand);
   hand = (Hand*)malloc(sizeof(Hand));
@@ -257,11 +280,11 @@ int main(int argc, char **argv) {
   StdDeck_CardMask_RESET(dead);
   if (parse_pocket(*(argv+1), hand, dead) == 1) {
     printf("hhar: %d\n",hand->dist_n);
-    ll_card* c = hand->hand_dist;
+    c = hand->hand_dist;
     for (int i=0; i<hand->dist_n; i++) {
       DprintMask(StdDeck, c->cards);
       printf("\n");
-      c = (ll_card*)c->next;
+      c = c->next;
     }
   }
   return 0;
