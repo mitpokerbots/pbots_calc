@@ -183,6 +183,30 @@ int extract_cards_pair(char* cards, Hand* hand, StdDeck_CardMask dead) {
   return 1;
 }
 
+int extract_cards_suited(char* cards, Hand* hand, StdDeck_CardMask dead) {
+  // extract limits to possible ranges
+  int ceil = char2rank(cards[0]);
+  int floor = char2rank(cards[0]);
+  if (strchr(cards, '-') != NULL) {
+    const char* index = strchr(cards, '-');
+    floor = char2rank(*(index+1));
+  } else if (strchr(cards, '+') != NULL) {
+    ceil = StdDeck_Rank_ACE;
+  }
+  if (floor < 0 || ceil < 0) {
+    return 0;
+  }
+  return 1;
+}
+
+int extract_cards_offsuit(char* cards, Hand* hand, StdDeck_CardMask dead) {
+  return 1;
+}
+
+int extract_cards_default(char* cards, Hand* hand, StdDeck_CardMask dead) {
+  return 1;
+}
+
 int parse_pocket(char* hand_text, Hand* hand, StdDeck_CardMask dead) {
   char *c = strtok(hand_text, ",");
   while (c != NULL) {
@@ -196,7 +220,15 @@ int parse_pocket(char* hand_text, Hand* hand, StdDeck_CardMask dead) {
     } else if (p == RAND) {
       extract_cards_random(hand, dead);
     } else if (p == PAIR) {
-      extract_cards_pair(c, hand, dead);
+      if (extract_cards_pair(c, hand, dead) == 0) {
+        return 0;
+      }
+    } else if (p == SUITED) {
+      extract_cards_suited(c, hand, dead);
+    } else if (p == OFFSUIT) {
+      extract_cards_offsuit(c, hand, dead);
+    } else {
+      extract_cards_default(c, hand, dead);
     }
     c = strtok(NULL,",");
   }
