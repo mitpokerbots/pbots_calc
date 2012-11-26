@@ -113,32 +113,42 @@ pocket_type get_pocket_type(const char* pocket) {
     return ERROR;
 
   if (n_p == 4) {
-    if (strchr("shdc", tolower(pocket[1])) != NULL &&
-        strchr("shdc", tolower(pocket[3])) != NULL &&
+    if (strchr("SHDC", toupper(pocket[1])) != NULL &&
+        strchr("SHDC", toupper(pocket[3])) != NULL &&
         strchr("23456789TJQKA", toupper(pocket[2])) != NULL) {
           return SINGULAR;
     }
   }
-  if (n_p >= 2 && pocket[0] == pocket[1])
-    return PAIR;
+  // final sanity check for remaining cases
+  if (strchr("23456789TJQKA", toupper(pocket[1])) == NULL)
+    return ERROR;
+  if (n_p >= 2 && pocket[0] == pocket[1]) {
+    if (n_p == 2 ||
+        (n_p == 3 && pocket[2] == '+') ||
+        (n_p == 5 && pocket[2] == '-' &&
+         strchr("23456789TJQKA", toupper(pocket[3])) != NULL &&
+         pocket[3] == pocket[4])) {
+      return PAIR;
+    }
+    return ERROR;
+  }
+  if (n_p == 2)
+    return NONE;
   if (n_p >= 3) {
-    if (strchr("23456789TJQKA", toupper(pocket[1])) == NULL)
-      return ERROR;
     if (n_p == 3 ||
         (n_p == 4 && pocket[3] == '+') ||
         (n_p == 7 && pocket[3] == '-' &&
          strchr("23456789TJQKA", toupper(pocket[4])) != NULL &&
          strchr("23456789TJQKA", toupper(pocket[5])) != NULL &&
-         pocket[2] == pocket[6])) {
+         pocket[2] == pocket[6] &&
+         (pocket[0] == pocket[4] ||
+          pocket[1] == pocket[5]))) {
       if (pocket[2] == 's')
         return SUITED;
       if (pocket[2] == 'o')
         return OFFSUIT;
-      return ERROR;
     }
   }
-  if (n_p == 2)
-    return NONE;
 
   return ERROR;
 }
@@ -176,8 +186,7 @@ int extract_cards_pair(char* cards, Hand* hand, StdDeck_CardMask dead) {
   int ceil = char2rank(cards[0]);
   int floor = char2rank(cards[0]);
   if (strchr(cards, '-') != NULL) {
-    const char* index = strchr(cards, '-');
-    if ((floor = char2rank(*(index+1))) < 0) {
+    if ((floor = char2rank(cards[3])) < 0) {
       return 0;
     }
   } else if (strchr(cards, '+') != NULL) {
@@ -188,6 +197,9 @@ int extract_cards_pair(char* cards, Hand* hand, StdDeck_CardMask dead) {
     int temp = floor;
     floor = ceil;
     ceil = temp;
+  }
+  if ( floor < 0 || ceil < 0 ) {
+    return 0;
   }
 
   StdDeck_CardMask pocket;
@@ -208,18 +220,53 @@ int extract_cards_pair(char* cards, Hand* hand, StdDeck_CardMask dead) {
 }
 
 int extract_cards_suited(char* cards, Hand* hand, StdDeck_CardMask dead) {
+  // highest card is always fixed, must appear in both limits (if range)
+  int rank1 = char2rank(cards[0]);
+  int rank2 = char2rank(cards[1]);
+  if (rank1 < 0 || rank2 < 0) {
+    return 0;
+  }
+  int high_index = 0;
+  if (rank2 > rank1) {
+    high_index = 1;
+    rank1 = rank2;
+  }
+
   // extract limits to possible ranges
-  int ceil = char2rank(cards[0]);
-  int floor = char2rank(cards[0]);
+  int floor = char2rank(cards[1-high_index]);
+  int ceil = floor;
   if (strchr(cards, '-') != NULL) {
     const char* index = strchr(cards, '-');
-    floor = char2rank(*(index+1));
+    floor = char2rank(*((index+1)+(1-high_index)));
+    // if inverse range specified, just flip it
+    if (floor > ceil) {
+      int temp = floor;
+      floor = ceil;
+      ceil = temp;
+    }
   } else if (strchr(cards, '+') != NULL) {
     ceil = StdDeck_Rank_ACE;
   }
-  if (floor < 0 || ceil < 0) {
+  if (ceil >= rank1) {
+    ceil = rank1-1;
+  }
+  if ( floor < 0 || ceil < 0 ) {
     return 0;
   }
+
+  StdDeck_CardMask pocket;
+  // enumerate all cards in range
+  for (int rank2=floor; rank2 <= ceil; rank2++) {
+    for(int suit = StdDeck_Suit_FIRST; suit <= StdDeck_Suit_LAST; suit++) {
+      StdDeck_CardMask_RESET(pocket);
+      StdDeck_CardMask_SET(pocket, StdDeck_MAKE_CARD(rank1, suit) );
+      StdDeck_CardMask_SET(pocket, StdDeck_MAKE_CARD(rank2, suit) );
+      if (!StdDeck_CardMask_ANY_SET(dead, pocket)) {
+        insert(pocket, hand);
+      }
+    }
+  }
+
   return 1;
 }
 
