@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <time.h>
 
 #include "poker_defs.h"
 #include "enumdefs.h"
@@ -18,6 +19,7 @@ typedef struct h_dist {
 typedef struct {
   Hand_Dist* hand_dist;
   int dist_n;
+  int randomized;
 } Hand;
 
 typedef enum {
@@ -59,38 +61,121 @@ static int char2suit(char c) {
   }
 }
 
-void insert(StdDeck_CardMask cards, Hand* hand) {
-  Hand_Dist* new = (Hand_Dist*)malloc(sizeof(Hand_Dist));
-  new->cards = cards;
+Hand* create_hand(void) {
+  Hand* hand = (Hand*)malloc(sizeof(Hand));
+  hand->dist_n = 0;
+  hand->randomized = 0;
+  return hand;
+}
+
+// insert entry into linked list at "tail", as in right before entry pointed to
+// by hand.
+void insert(Hand* hand, Hand_Dist* h) {
   if (hand->dist_n < 1) {
     // first entry, needs to be self-referencing
-    new->next = new;
-    new->prev = new;
-    hand->hand_dist = new;
+    h->next = h;
+    h->prev = h;
+    hand->hand_dist = h;
   } else {
     Hand_Dist* cur = hand->hand_dist;
     // ensure no duplicate entries
-    for (int i=0; i<hand->dist_n; i++) {
-      if (StdDeck_CardMask_EQUAL(cards, cur->cards)) {
+    int i;
+    for (i=0; i<hand->dist_n; i++) {
+      if (StdDeck_CardMask_EQUAL(h->cards, cur->cards)) {
         return;
       }
       cur = cur->next;
     }
     // set my refs
-    new->next = hand->hand_dist;
-    new->prev = hand->hand_dist->prev;
+    h->next = hand->hand_dist;
+    h->prev = hand->hand_dist->prev;
     // update other refs
-    new->prev->next = new;
-    hand->hand_dist->prev = new;
+    h->prev->next = h;
+    hand->hand_dist->prev = h;
   }
   // incr counter
   hand->dist_n++;
 }
 
+// create and insert new hand_distribution entry of given cards
+void insert_new(StdDeck_CardMask cards, Hand* hand) {
+  Hand_Dist* new = (Hand_Dist*)malloc(sizeof(Hand_Dist));
+  new->cards = cards;
+  insert(hand, new);
+}
+
+void remove_hd(Hand_Dist* h) {
+  // update pointers from other nodes
+  h->next->prev = h->prev;
+  h->prev->next = h->next;
+  // make this operation idemnipotent
+  // update node pointers, making self-referencing
+  h->next = h;
+  h->prev = h;
+}
+
+void remove_and_free(Hand_Dist* h) {
+  remove_hd(h);
+  free(h);
+}
+
+// given a hand, randomly re-order it, IN PLACE. Conceptually, this is done by
+// randomly creating a new linked list from the nodes of the current linked list
+// by iterating hand->dist_n times, selecting a random node from the current
+// linked list and removing it and inserting into the new list.
+void randomize(Hand* hand) {
+  Hand_Dist* cur_h = hand->hand_dist;
+  Hand_Dist* next_h;
+
+  // perform operation in place, so start by tricking hand into thinking it's
+  // empty
+  int j = hand->dist_n;
+  hand->dist_n = 0;
+
+  int i;
+  for (; j>0; j--) {
+    // Might consider using
+    // http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT/index.html instead
+    // of built in rand...
+    for (i=rand()%j; i>=0; i--) {
+      cur_h = cur_h->next;
+    }
+    // keep reference to "old" linked_list
+    next_h = cur_h->next;
+    remove_hd(cur_h);
+    insert(hand, cur_h);
+    // move back to "old" linked_list and continue
+    cur_h = next_h;
+  }
+  hand->randomized = 1;
+}
+
+StdDeck_CardMask choose(Hand* hand) {
+  if (hand->randomized) {
+    randomize(hand);
+  }
+  hand->hand_dist = hand->hand_dist->next;
+  return hand->hand_dist->prev->cards;
+}
+
+void print_hand_dist(Hand* hand) {
+  printf("HD(%d) [(",hand->dist_n);
+  Hand_Dist* c = hand->hand_dist;
+  int i;
+  for (i=0; i<hand->dist_n-1; i++) {
+    DprintMask(StdDeck, c->cards);
+    printf(")->(");
+    c = c->next;
+  }
+  DprintMask(StdDeck, c->cards);
+  printf(")]\n");
+}
+
 void free_hand(Hand* hand) {
   Hand_Dist* next;
   Hand_Dist* cur = hand->hand_dist;
-  for (int i=0; i<hand->dist_n; i++) {
+  int i;
+  for (i=0; i<hand->dist_n; i++) {
     next = cur->next;
     //printf("freeing %d\n", next->cards);
     free(cur);
@@ -105,7 +190,8 @@ pocket_type get_pocket_type(const char* pocket) {
     return RAND;
   size_t n_p = strlen(pocket);
   // filter out blatant errors in input
-  for (int i=0; i<n_p; i++) {
+  int i;
+  for (i=0; i<n_p; i++) {
     if (strchr("23456789TJQKA+-SHDCO", toupper(pocket[i])) == NULL)
       return ERROR;
   }
@@ -172,13 +258,13 @@ int extract_cards_singular(char* cards, Hand* hand, StdDeck_CardMask dead) {
     printf("R1: in dead cards\n");
     return 1;
   }
-  insert(pocket, hand);
+  insert_new(pocket, hand);
   return 1;
 }
 
 void extract_cards_random(Hand* hand, StdDeck_CardMask dead) {
   StdDeck_CardMask curHand;
-  DECK_ENUMERATE_2_CARDS_D(StdDeck, curHand, dead, insert(curHand, hand););
+  DECK_ENUMERATE_2_CARDS_D(StdDeck, curHand, dead, insert_new(curHand, hand););
 }
 
 int extract_cards_pair(char* cards, Hand* hand, StdDeck_CardMask dead) {
@@ -204,14 +290,15 @@ int extract_cards_pair(char* cards, Hand* hand, StdDeck_CardMask dead) {
 
   StdDeck_CardMask pocket;
   // enumerate all cards in range
-  for (int rank=floor; rank <= ceil; rank++) {
-    for(int suit1 = StdDeck_Suit_FIRST; suit1 <= StdDeck_Suit_LAST; suit1++) {
-      for (int suit2 = suit1 + 1; suit2 <= StdDeck_Suit_LAST; suit2++) {
+  int rank, suit1, suit2;
+  for (rank=floor; rank <= ceil; rank++) {
+    for(suit1 = StdDeck_Suit_FIRST; suit1 <= StdDeck_Suit_LAST; suit1++) {
+      for (suit2 = suit1 + 1; suit2 <= StdDeck_Suit_LAST; suit2++) {
         StdDeck_CardMask_RESET(pocket);
         StdDeck_CardMask_SET(pocket, StdDeck_MAKE_CARD(rank, suit1) );
         StdDeck_CardMask_SET(pocket, StdDeck_MAKE_CARD(rank, suit2) );
         if (!StdDeck_CardMask_ANY_SET(dead, pocket)) {
-          insert(pocket, hand);
+          insert_new(pocket, hand);
         }
       }
     }
@@ -265,13 +352,14 @@ int extract_cards_suited(char* cards, Hand* hand, StdDeck_CardMask dead) {
 
   StdDeck_CardMask pocket;
   // enumerate all cards in range
-  for (int rank2=floor; rank2 <= ceil; rank2++) {
-    for(int suit = StdDeck_Suit_FIRST; suit <= StdDeck_Suit_LAST; suit++) {
+  int rank2, suit;
+  for (rank2=floor; rank2 <= ceil; rank2++) {
+    for(suit = StdDeck_Suit_FIRST; suit <= StdDeck_Suit_LAST; suit++) {
       StdDeck_CardMask_RESET(pocket);
       StdDeck_CardMask_SET(pocket, StdDeck_MAKE_CARD(rank1, suit) );
       StdDeck_CardMask_SET(pocket, StdDeck_MAKE_CARD(rank2, suit) );
       if (!StdDeck_CardMask_ANY_SET(dead, pocket)) {
-        insert(pocket, hand);
+        insert_new(pocket, hand);
       }
     }
   }
@@ -287,16 +375,17 @@ int extract_cards_offsuit(char* cards, Hand* hand, StdDeck_CardMask dead) {
 
   StdDeck_CardMask pocket;
   // enumerate all cards in range
-  for (int rank2=floor; rank2 <= ceil; rank2++) {
-    for(int suit1 = StdDeck_Suit_FIRST; suit1 <= StdDeck_Suit_LAST; suit1++) {
-      for(int suit2 = StdDeck_Suit_FIRST; suit2 <= StdDeck_Suit_LAST; suit2++) {
+  int rank2, suit1, suit2;
+  for (rank2=floor; rank2 <= ceil; rank2++) {
+    for(suit1 = StdDeck_Suit_FIRST; suit1 <= StdDeck_Suit_LAST; suit1++) {
+      for(suit2 = StdDeck_Suit_FIRST; suit2 <= StdDeck_Suit_LAST; suit2++) {
         if (suit1 == suit2)
           continue;
         StdDeck_CardMask_RESET(pocket);
         StdDeck_CardMask_SET(pocket, StdDeck_MAKE_CARD(rank1, suit1) );
         StdDeck_CardMask_SET(pocket, StdDeck_MAKE_CARD(rank2, suit2) );
         if (!StdDeck_CardMask_ANY_SET(dead, pocket)) {
-          insert(pocket, hand);
+          insert_new(pocket, hand);
         }
       }
     }
@@ -340,30 +429,23 @@ int parse_pocket(char* hand_text, Hand* hand, StdDeck_CardMask dead) {
 }
 
 int main(int argc, char **argv) {
-  Hand* hand = (Hand*)malloc(sizeof(Hand));
-  hand->dist_n = 0;
-  insert(StdDeck_MASK(0), hand);
-  insert(StdDeck_MASK(5), hand);
-  insert(StdDeck_MASK(6), hand);
-  Hand_Dist* c = hand->hand_dist;
-  for (int i=0; i<3; i++) {
-    DprintMask(StdDeck, c->cards);
-    printf("\n");
-    c = c->next;
-  }
+  srand(time(NULL));
+
+  Hand* hand = create_hand();
+  insert_new(StdDeck_MASK(0), hand);
+  insert_new(StdDeck_MASK(5), hand);
+  insert_new(StdDeck_MASK(6), hand);
+  print_hand_dist(hand);
   free_hand(hand);
-  hand = (Hand*)malloc(sizeof(Hand));
-  hand->dist_n = 0;
+
+  hand = create_hand();
   StdDeck_CardMask dead;
   StdDeck_CardMask_RESET(dead);
   if (parse_pocket(*(argv+1), hand, dead) == 1) {
     printf("hhar: %d\n",hand->dist_n);
-    c = hand->hand_dist;
-    for (int i=0; i<hand->dist_n; i++) {
-      DprintMask(StdDeck, c->cards);
-      printf("\n");
-      c = c->next;
-    }
+    print_hand_dist(hand);
+    randomize(hand);
+    print_hand_dist(hand);
   }
   return 0;
 }
