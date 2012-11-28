@@ -219,7 +219,8 @@ int extract_cards_pair(char* cards, Hand* hand, StdDeck_CardMask dead) {
   return 1;
 }
 
-int extract_cards_suited(char* cards, Hand* hand, StdDeck_CardMask dead) {
+// Helper function to extract bounds for use in extract_suited and offsuit
+int extract_bounds(char* cards, int* floor, int* ceil, int* rank) {
   // highest card is always fixed, must appear in both limits (if range)
   int rank1 = char2rank(cards[0]);
   int rank2 = char2rank(cards[1]);
@@ -233,24 +234,32 @@ int extract_cards_suited(char* cards, Hand* hand, StdDeck_CardMask dead) {
   }
 
   // extract limits to possible ranges
-  int floor = char2rank(cards[1-high_index]);
-  int ceil = floor;
+  *floor = char2rank(cards[1-high_index]);
+  *ceil = *floor;
   if (strchr(cards, '-') != NULL) {
     const char* index = strchr(cards, '-');
-    floor = char2rank(*((index+1)+(1-high_index)));
+    *floor = char2rank(*((index+1)+(1-high_index)));
     // if inverse range specified, just flip it
-    if (floor > ceil) {
-      int temp = floor;
-      floor = ceil;
-      ceil = temp;
+    if (*floor > *ceil) {
+      int temp = *floor;
+      *floor = *ceil;
+      *ceil = temp;
     }
   } else if (strchr(cards, '+') != NULL) {
-    ceil = StdDeck_Rank_ACE;
+    *ceil = StdDeck_Rank_ACE;
   }
-  if (ceil >= rank1) {
-    ceil = rank1-1;
+  if (*ceil >= rank1) {
+    *ceil = rank1-1;
   }
-  if ( floor < 0 || ceil < 0 ) {
+  if ( *floor < 0 || *ceil < 0 ) {
+    return 0;
+  }
+  *rank = rank1;
+  return 1;
+}
+int extract_cards_suited(char* cards, Hand* hand, StdDeck_CardMask dead) {
+  int floor, ceil, rank1;
+  if (extract_bounds(cards, &floor, &ceil, &rank1) == 0) {
     return 0;
   }
 
@@ -271,6 +280,28 @@ int extract_cards_suited(char* cards, Hand* hand, StdDeck_CardMask dead) {
 }
 
 int extract_cards_offsuit(char* cards, Hand* hand, StdDeck_CardMask dead) {
+  int floor, ceil, rank1;
+  if (extract_bounds(cards, &floor, &ceil, &rank1) == 0) {
+    return 0;
+  }
+
+  StdDeck_CardMask pocket;
+  // enumerate all cards in range
+  for (int rank2=floor; rank2 <= ceil; rank2++) {
+    for(int suit1 = StdDeck_Suit_FIRST; suit1 <= StdDeck_Suit_LAST; suit1++) {
+      for(int suit2 = StdDeck_Suit_FIRST; suit2 <= StdDeck_Suit_LAST; suit2++) {
+        if (suit1 == suit2)
+          continue;
+        StdDeck_CardMask_RESET(pocket);
+        StdDeck_CardMask_SET(pocket, StdDeck_MAKE_CARD(rank1, suit1) );
+        StdDeck_CardMask_SET(pocket, StdDeck_MAKE_CARD(rank2, suit2) );
+        if (!StdDeck_CardMask_ANY_SET(dead, pocket)) {
+          insert(pocket, hand);
+        }
+      }
+    }
+  }
+
   return 1;
 }
 
