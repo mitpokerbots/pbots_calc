@@ -134,9 +134,6 @@ void randomize(Hand* hand) {
 
   int i;
   for (; j>0; j--) {
-    // Might consider using
-    // http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT/index.html instead
-    // of built in rand...
     for (i=rand()%j; i>=0; i--) {
       cur_h = cur_h->next;
     }
@@ -150,12 +147,29 @@ void randomize(Hand* hand) {
   hand->randomized = 1;
 }
 
-StdDeck_CardMask choose(Hand* hand) {
-  if (hand->randomized) {
-    randomize(hand);
+void choose(Hand* hand, StdDeck_CardMask* cards) {
+  Hand_Dist* cur_h = hand->hand_dist;
+  int i;
+  // Might consider using
+  // http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT/index.html instead
+  // of built in rand...
+  for (i=rand()%hand->dist_n; i>=0; i--) {
+    cur_h = cur_h->next;
   }
-  hand->hand_dist = hand->hand_dist->next;
-  return hand->hand_dist->prev->cards;
+  hand->hand_dist = cur_h->next;
+  *cards = cur_h->cards;
+}
+
+int choose_D(Hand* hand, StdDeck_CardMask dead, StdDeck_CardMask* cards) {
+  int i;
+  for (i=0; i<10; i++) {
+    choose(hand, cards);
+    if (!StdDeck_CardMask_ANY_SET(dead, *cards)) {
+      return 1;
+    }
+  }
+  StdDeck_CardMask_RESET(*cards);
+  return 0;
 }
 
 void print_hand_dist(Hand* hand) {
@@ -244,12 +258,12 @@ int extract_cards_singular(char* cards, Hand* hand, StdDeck_CardMask dead) {
   StdDeck_CardMask_RESET(pocket);
   int card;
 
-  if (DstringToCard(StdDeck, cards, &card) == 0) {
+  if (!DstringToCard(StdDeck, cards, &card)) {
     printf("R1: parsing card1 failed\n");
     return 0;
   }
   StdDeck_CardMask_SET(pocket, card);
-  if (DstringToCard(StdDeck, cards+2, &card) == 0) {
+  if (!DstringToCard(StdDeck, cards+2, &card)) {
     printf("R1: parsing card2 failed\n");
     return 0;
   }
@@ -346,7 +360,7 @@ int extract_bounds(char* cards, int* floor, int* ceil, int* rank) {
 }
 int extract_cards_suited(char* cards, Hand* hand, StdDeck_CardMask dead) {
   int floor, ceil, rank1;
-  if (extract_bounds(cards, &floor, &ceil, &rank1) == 0) {
+  if (!extract_bounds(cards, &floor, &ceil, &rank1)) {
     return 0;
   }
 
@@ -369,7 +383,7 @@ int extract_cards_suited(char* cards, Hand* hand, StdDeck_CardMask dead) {
 
 int extract_cards_offsuit(char* cards, Hand* hand, StdDeck_CardMask dead) {
   int floor, ceil, rank1;
-  if (extract_bounds(cards, &floor, &ceil, &rank1) == 0) {
+  if (!extract_bounds(cards, &floor, &ceil, &rank1)) {
     return 0;
   }
 
@@ -401,13 +415,13 @@ int parse_pocket(char* hand_text, Hand* hand, StdDeck_CardMask dead) {
     pocket_type p = get_pocket_type(c);
     printf("here3 %d\n", p);
     if (p == SINGULAR) {
-      if (extract_cards_singular(c, hand, dead) == 0) {
+      if (!extract_cards_singular(c, hand, dead)) {
         return 0;
       }
     } else if (p == RAND) {
       extract_cards_random(hand, dead);
     } else if (p == PAIR) {
-      if (extract_cards_pair(c, hand, dead) == 0) {
+      if (!extract_cards_pair(c, hand, dead)) {
         return 0;
       }
     } else if (p == SUITED) {
@@ -441,7 +455,7 @@ int main(int argc, char **argv) {
   hand = create_hand();
   StdDeck_CardMask dead;
   StdDeck_CardMask_RESET(dead);
-  if (parse_pocket(*(argv+1), hand, dead) == 1) {
+  if (parse_pocket(*(argv+1), hand, dead)) {
     printf("hhar: %d\n",hand->dist_n);
     print_hand_dist(hand);
     randomize(hand);
