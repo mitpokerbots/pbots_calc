@@ -8,6 +8,7 @@
 #include "enumdefs.h"
 
 //#include "inlines\eval.h"
+
 typedef struct h_dist h_dist;
 // store distribution of pocket cards in ll
 typedef struct h_dist {
@@ -21,6 +22,18 @@ typedef struct {
   int dist_n;
   int randomized;
 } Hand;
+
+typedef struct hand_ll hand_ll;
+typedef struct hand_ll {
+  Hand* hand;
+  hand_ll* next;
+  hand_ll* prev;
+} Hand_List;
+
+typedef struct {
+  Hand_List* hands;
+  int size;
+} Hands;
 
 typedef enum {
   ERROR,
@@ -66,6 +79,30 @@ Hand* create_hand(void) {
   hand->dist_n = 0;
   hand->randomized = 0;
   return hand;
+}
+
+Hands* create_hands(void) {
+  Hands* hands = (Hands*)malloc(sizeof(Hands));
+  hands->size = 0;
+  return hands;
+}
+
+void insert_hand(Hands* hands, Hand* hand) {
+  Hand_List* h = (Hand_List*) malloc(sizeof(Hand_List));
+  h->hand = hand;
+  if (hands->size == 0) {
+    h->next = h;
+    h->prev = h;
+    hands->hands = h;
+  } else {
+    // set my refs
+    h->next = hands->hands;
+    h->prev = hands->hands->prev;
+    // update other refs
+    h->prev->next = h;
+    hands->hands->prev = h;
+  }
+  hands->size += 1;
 }
 
 // insert entry into linked list at "tail", as in right before entry pointed to
@@ -119,10 +156,11 @@ void remove_and_free(Hand_Dist* h) {
   free(h);
 }
 
-// given a hand, randomly re-order it, IN PLACE. Conceptually, this is done by
-// randomly creating a new linked list from the nodes of the current linked list
-// by iterating hand->dist_n times, selecting a random node from the current
-// linked list and removing it and inserting into the new list.
+// given a hand, generate a random permutation, IN PLACE.
+// Conceptually, this is done by randomly creating a new linked list from the
+// nodes of the current linked list by iterating hand->dist_n times, selecting a
+// random node from the current linked list and removing it and inserting into
+// the new list.
 void randomize(Hand* hand) {
   Hand_Dist* cur_h = hand->hand_dist;
   Hand_Dist* next_h;
@@ -178,11 +216,20 @@ void print_hand_dist(Hand* hand) {
   int i;
   for (i=0; i<hand->dist_n-1; i++) {
     DprintMask(StdDeck, c->cards);
-    printf(")->(");
+    printf("),(");
     c = c->next;
   }
   DprintMask(StdDeck, c->cards);
   printf(")]\n");
+}
+
+void print_hands(Hands* hands) {
+  Hand_List* c = hands->hands;
+  int i;
+  for (i=0; i<hands->size; i++) {
+    print_hand_dist(c->hand);
+    c = c->next;
+  }
 }
 
 void free_hand(Hand* hand) {
@@ -196,6 +243,20 @@ void free_hand(Hand* hand) {
     cur = next;
   }
   free(hand);
+}
+
+void free_hands(Hands* hands) {
+  Hand_List* next;
+  Hand_List* cur = hands->hands;
+  int i;
+  for (i=0; i<hands->size; i++) {
+    next = cur->next;
+    //printf("freeing");print_hand_dist(cur->hand)
+    free_hand(cur->hand);
+    free(cur);
+    cur = next;
+  }
+  free(hands);
 }
 
 pocket_type get_pocket_type(const char* pocket) {
@@ -212,11 +273,17 @@ pocket_type get_pocket_type(const char* pocket) {
   if (n_p < 2)
     return ERROR;
 
+  if (strchr("23456789TJQKA", toupper(pocket[0])) == NULL)
+    return ERROR;
   if (n_p == 4) {
     if (strchr("SHDC", toupper(pocket[1])) != NULL &&
         strchr("SHDC", toupper(pocket[3])) != NULL &&
         strchr("23456789TJQKA", toupper(pocket[2])) != NULL) {
-          return SINGULAR;
+      if (pocket[0] == pocket[2] && pocket[1] == pocket[3]) {
+        return ERROR;
+      } else {
+        return SINGULAR;
+      }
     }
   }
   // final sanity check for remaining cases
@@ -349,9 +416,11 @@ int extract_bounds(char* cards, int* floor, int* ceil, int* rank) {
   } else if (strchr(cards, '+') != NULL) {
     *ceil = StdDeck_Rank_ACE;
   }
+  /* what does this do?
   if (*ceil >= rank1) {
     *ceil = rank1-1;
   }
+  */
   if ( *floor < 0 || *ceil < 0 ) {
     return 0;
   }
@@ -369,6 +438,8 @@ int extract_cards_suited(char* cards, Hand* hand, StdDeck_CardMask dead) {
   int rank2, suit;
   for (rank2=floor; rank2 <= ceil; rank2++) {
     for(suit = StdDeck_Suit_FIRST; suit <= StdDeck_Suit_LAST; suit++) {
+      if (rank1 == rank2)
+        continue;
       StdDeck_CardMask_RESET(pocket);
       StdDeck_CardMask_SET(pocket, StdDeck_MAKE_CARD(rank1, suit) );
       StdDeck_CardMask_SET(pocket, StdDeck_MAKE_CARD(rank2, suit) );
@@ -408,58 +479,183 @@ int extract_cards_offsuit(char* cards, Hand* hand, StdDeck_CardMask dead) {
   return 1;
 }
 
-int parse_pocket(char* hand_text, Hand* hand, StdDeck_CardMask dead) {
-  char *c = strtok(hand_text, ",");
-  while (c != NULL) {
-    printf("here2: %s\n", c);
-    pocket_type p = get_pocket_type(c);
+Hand* parse_pocket(const char* hand_text, StdDeck_CardMask dead) {
+  char* hand_text_copy = strdup(hand_text);
+  printf("parse_pocket %s\n",hand_text);
+  Hand* hand = create_hand();
+  int err = 0;
+  char *str, *token, *str_save_ptr;
+  for (str = hand_text_copy; ; str=NULL) {
+    token = strtok_r(str, ",", &str_save_ptr);
+    if (token == NULL)
+      break;
+    printf("here2: %s\n", token);
+    pocket_type p = get_pocket_type(token);
     printf("here3 %d\n", p);
     if (p == SINGULAR) {
-      if (!extract_cards_singular(c, hand, dead)) {
-        return 0;
+      if (!extract_cards_singular(token, hand, dead)) {
+        err = 1;
+        break;
       }
     } else if (p == RAND) {
       extract_cards_random(hand, dead);
     } else if (p == PAIR) {
-      if (!extract_cards_pair(c, hand, dead)) {
-        return 0;
+      if (!extract_cards_pair(token, hand, dead)) {
+        err = 1;
+        break;
       }
     } else if (p == SUITED) {
-      extract_cards_suited(c, hand, dead);
+      extract_cards_suited(token, hand, dead);
     } else if (p == OFFSUIT) {
-      extract_cards_offsuit(c, hand, dead);
+      extract_cards_offsuit(token, hand, dead);
     } else if (p == NONE) {
-      extract_cards_suited(c, hand, dead);
-      extract_cards_offsuit(c, hand, dead);
+      extract_cards_suited(token, hand, dead);
+      extract_cards_offsuit(token, hand, dead);
     } else {
+      err = 1;
+      break;
+    }
+  }
+  free(hand_text_copy);
+  if (hand->dist_n == 0 || err) {
+    free_hand(hand);
+    return NULL;
+  }
+  return hand;
+}
+
+int extract_single_cards(char* cards_str, StdDeck_CardMask* cards) {
+  StdDeck_CardMask_RESET(*cards);
+  int i;
+  int card;
+  for (i=0; i<strlen(cards_str); i+=2) {
+    if (!DstringToCard(StdDeck, cards_str+i, &card)) {
+      printf("R1: parsing card1 failed\n");
       return 0;
     }
-    c = strtok(NULL,",");
+    StdDeck_CardMask_SET(*cards, card);
   }
-  if (hand->dist_n == 0) {
+  return 1;
+}
+
+Hands* get_hands(const char* hand_str, StdDeck_CardMask* dead) {
+  Hands* hands = create_hands();
+  Hand* hand;
+
+  // get all singular (non-ranged) hands
+  char* hand_str_copy = strdup(hand_str);
+  printf("get_hands:singular:%s\n", hand_str_copy);
+  int err = 0;
+  char *str, *token, *str_save_ptr;
+  for (str = hand_str_copy; ; str=NULL) {
+    token = strtok_r(str, ":", &str_save_ptr);
+    if (token == NULL)
+      break;
+    pocket_type p = get_pocket_type(token);
+    // TODO: There are cases where range is specified, but because of dead
+    // cards, it is reduced to a single possible hand. However, we can't know
+    // this until we call parse_pockets...
+    if (p == SINGULAR) {
+      if ((hand = parse_pocket(token, *dead)) == NULL) {
+        printf("calc: Improperly formatted singular hand %s\n",token);
+        err = 1;
+        break;
+      } else {
+        if (hand->dist_n != 1) {
+          printf("calc: Found multiple pockets when only one was specified? Saw %s but got ",
+                 token);
+          print_hand_dist(hand);
+          err = 1;
+          break;
+        } else {
+          insert_hand(hands, hand);
+          // Since we know which cards this hand is, add them to dead cards
+          StdDeck_CardMask_OR(*dead, *dead, hand->hand_dist->cards);
+        }
+      }
+    }
+  }
+  free(hand_str_copy);
+  if (err) {
+    free_hands(hands);
+    return NULL;
+  }
+
+  // get remaining hands
+  char* hand_str_copy2 = strdup(hand_str);
+  printf("get_hands:ranged (%d) %s\n", (int)strlen(hand_str_copy2), hand_str_copy2);
+  char *str_save_ptr2;
+  for (str = hand_str_copy2; ; str=NULL) {
+    token = strtok_r(str, ":", &str_save_ptr2);
+    if (token == NULL)
+      break;
+    pocket_type p = get_pocket_type(token);
+    if (p != SINGULAR) {
+      if ((hand = parse_pocket(token, *dead)) == NULL) {
+        printf("calc: Improperly formatted ranged hand %s\n",token);
+        err = 1;
+        break;
+      } else {
+        insert_hand(hands, hand);
+      }
+    }
+  }
+  free(hand_str_copy2);
+  if (err) {
+    free_hands(hands);
+    return NULL;
+  }
+
+  return hands;
+}
+
+int calc(const char* hand_str, char* board_str, char* dead_str, int iters) {
+  StdDeck_CardMask board, dead;
+  if (!extract_single_cards(dead_str, &dead)) {
+    printf("calc: Improperly formatted dead cards %s\n", dead_str);
     return 0;
   }
+  if (!extract_single_cards(board_str, &board)) {
+    printf("calc: Improperly formatted board cards %s\n", board_str);
+    return 0;
+  }
+  StdDeck_CardMask_OR(dead, dead, board);
+
+  Hands* hands;
+  if ((hands = get_hands(hand_str, &dead)) == NULL) {
+    return 0;
+  }
+  print_hands(hands);
+  printf("board: ");
+  DprintMask(StdDeck, board);
+  printf("\ndead: ");
+  DprintMask(StdDeck, dead);
+  printf("\n");
   return 1;
 }
 
 int main(int argc, char **argv) {
   srand(time(NULL));
-
-  Hand* hand = create_hand();
-  insert_new(StdDeck_MASK(0), hand);
-  insert_new(StdDeck_MASK(5), hand);
-  insert_new(StdDeck_MASK(6), hand);
-  print_hand_dist(hand);
-  free_hand(hand);
-
-  hand = create_hand();
+  if (argc < 2) {
+    printf("usage: %s hand1:hand2:hand... [board [dead]]\n", argv[0]);
+    return 0;
+  }
+  char* board = "";
+  char* dead = "";
+  if (argc >= 3) {
+    board = argv[2];
+    if (argc >= 4) {
+      dead = argv[3];
+    }
+  }
+  calc(argv[1], board, dead, 10);
+  /*
+  Hands* hands;
   StdDeck_CardMask dead;
   StdDeck_CardMask_RESET(dead);
-  if (parse_pocket(*(argv+1), hand, dead)) {
-    printf("hhar: %d\n",hand->dist_n);
-    print_hand_dist(hand);
-    randomize(hand);
-    print_hand_dist(hand);
+  if ((hands = get_hands(argv[1], &dead)) != NULL) {
+    print_hands(hands);
   }
-  return 0;
+  */
+  return 1;
 }
