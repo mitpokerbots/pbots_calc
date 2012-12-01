@@ -81,3 +81,52 @@ void remove_and_free(Hand_Dist* h) {
   remove_hd(h);
   free(h);
 }
+
+void print_hand_dist(Hand* hand) {
+  printf("HD(%d) [(",hand->dist_n);
+  Hand_Dist* c = hand->hand_dist;
+  int i;
+  for (i=0; i<hand->dist_n-1; i++) {
+    DprintMask(StdDeck, c->cards);
+    printf("),(");
+    c = c->next;
+  }
+  DprintMask(StdDeck, c->cards);
+  printf(")]\n");
+}
+
+void print_hands(Hands* hands) {
+  Hand_List* c = hands->hands;
+  int i;
+  for (i=0; i<hands->size; i++) {
+    print_hand_dist(c->hand);
+    c = c->next;
+  }
+}
+
+void free_hand(Hand* hand) {
+  Hand_Dist* next;
+  Hand_Dist* cur = hand->hand_dist;
+  int i;
+  for (i=0; i<hand->dist_n; i++) {
+    next = cur->next;
+    //printf("freeing %d\n", next->cards);
+    free(cur);
+    cur = next;
+  }
+  free(hand);
+}
+
+void free_hands(Hands* hands) {
+  Hand_List* next;
+  Hand_List* cur = hands->hands;
+  int i;
+  for (i=0; i<hands->size; i++) {
+    next = cur->next;
+    //printf("freeing");print_hand_dist(cur->hand)
+    free_hand(cur->hand);
+    free(cur);
+    cur = next;
+  }
+  free(hands);
+}

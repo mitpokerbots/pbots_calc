@@ -63,10 +63,14 @@ static int char2suit(char c) {
 
 Hand* create_hand(void);
 Hands* create_hands(void);
-void insert_hand(Hands* hands, Hand* hand);
-void insert_hand_dist(Hand* hand, Hand_Dist* h);
-void insert_new(StdDeck_CardMask cards, Hand* hand);
-void remove_hd(Hand_Dist* h);
-void remove_and_free(Hand_Dist* h);
+void insert_hand(Hands*, Hand*);;
+void insert_hand_dist(Hand*, Hand_Dist*);
+void insert_new(StdDeck_CardMask, Hand*);
+void remove_hd(Hand_Dist*);
+void remove_and_free(Hand_Dist*);
+void print_hand_dist(Hand*);
+void print_hands(Hands*);
+void free_hand(Hand*);
+void free_hands(Hands*);
 
 #endif
