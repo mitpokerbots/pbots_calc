@@ -4,36 +4,11 @@
 #include <string.h>
 #include <time.h>
 
-#include "poker_defs.h"
-#include "enumdefs.h"
+#include "util.h"
+
 
 //#include "inlines\eval.h"
 
-typedef struct h_dist h_dist;
-// store distribution of pocket cards in ll
-typedef struct h_dist {
-  StdDeck_CardMask cards;
-  h_dist* next;
-  h_dist* prev;
-} Hand_Dist;
-
-typedef struct {
-  Hand_Dist* hand_dist;
-  int dist_n;
-  int randomized;
-} Hand;
-
-typedef struct hand_ll hand_ll;
-typedef struct hand_ll {
-  Hand* hand;
-  hand_ll* next;
-  hand_ll* prev;
-} Hand_List;
-
-typedef struct {
-  Hand_List* hands;
-  int size;
-} Hands;
 
 typedef enum {
   ERROR,
@@ -44,117 +19,6 @@ typedef enum {
   OFFSUIT,
   NONE
 } pocket_type;
-
-static int char2rank(char c) {
-  switch(toupper(c)) {
-    case '2': return StdDeck_Rank_2;
-    case '3': return StdDeck_Rank_3;
-    case '4': return StdDeck_Rank_4;
-    case '5': return StdDeck_Rank_5;
-    case '6': return StdDeck_Rank_6;
-    case '7': return StdDeck_Rank_7;
-    case '8': return StdDeck_Rank_8;
-    case '9': return StdDeck_Rank_9;
-    case 'T': return StdDeck_Rank_TEN;
-    case 'J': return StdDeck_Rank_JACK;
-    case 'Q': return StdDeck_Rank_QUEEN;
-    case 'K': return StdDeck_Rank_KING;
-    case 'A': return StdDeck_Rank_ACE;
-    default: return -1;
-  }
-}
-
-static int char2suit(char c) {
-  switch(toupper(c)) {
-    case 'h': return StdDeck_Suit_HEARTS;
-    case 'd': return StdDeck_Suit_DIAMONDS;
-    case 'c': return StdDeck_Suit_CLUBS;
-    case 's': return StdDeck_Suit_SPADES;
-    default: return -1;
-  }
-}
-
-Hand* create_hand(void) {
-  Hand* hand = (Hand*)malloc(sizeof(Hand));
-  hand->dist_n = 0;
-  hand->randomized = 0;
-  return hand;
-}
-
-Hands* create_hands(void) {
-  Hands* hands = (Hands*)malloc(sizeof(Hands));
-  hands->size = 0;
-  return hands;
-}
-
-void insert_hand(Hands* hands, Hand* hand) {
-  Hand_List* h = (Hand_List*) malloc(sizeof(Hand_List));
-  h->hand = hand;
-  if (hands->size == 0) {
-    h->next = h;
-    h->prev = h;
-    hands->hands = h;
-  } else {
-    // set my refs
-    h->next = hands->hands;
-    h->prev = hands->hands->prev;
-    // update other refs
-    h->prev->next = h;
-    hands->hands->prev = h;
-  }
-  hands->size += 1;
-}
-
-// insert entry into linked list at "tail", as in right before entry pointed to
-// by hand.
-void insert(Hand* hand, Hand_Dist* h) {
-  if (hand->dist_n < 1) {
-    // first entry, needs to be self-referencing
-    h->next = h;
-    h->prev = h;
-    hand->hand_dist = h;
-  } else {
-    Hand_Dist* cur = hand->hand_dist;
-    // ensure no duplicate entries
-    int i;
-    for (i=0; i<hand->dist_n; i++) {
-      if (StdDeck_CardMask_EQUAL(h->cards, cur->cards)) {
-        return;
-      }
-      cur = cur->next;
-    }
-    // set my refs
-    h->next = hand->hand_dist;
-    h->prev = hand->hand_dist->prev;
-    // update other refs
-    h->prev->next = h;
-    hand->hand_dist->prev = h;
-  }
-  // incr counter
-  hand->dist_n++;
-}
-
-// create and insert new hand_distribution entry of given cards
-void insert_new(StdDeck_CardMask cards, Hand* hand) {
-  Hand_Dist* new = (Hand_Dist*)malloc(sizeof(Hand_Dist));
-  new->cards = cards;
-  insert(hand, new);
-}
-
-void remove_hd(Hand_Dist* h) {
-  // update pointers from other nodes
-  h->next->prev = h->prev;
-  h->prev->next = h->next;
-  // make this operation idemnipotent
-  // update node pointers, making self-referencing
-  h->next = h;
-  h->prev = h;
-}
-
-void remove_and_free(Hand_Dist* h) {
-  remove_hd(h);
-  free(h);
-}
 
 // given a hand, generate a random permutation, IN PLACE.
 // Conceptually, this is done by randomly creating a new linked list from the
@@ -178,7 +42,7 @@ void randomize(Hand* hand) {
     // keep reference to "old" linked_list
     next_h = cur_h->next;
     remove_hd(cur_h);
-    insert(hand, cur_h);
+    insert_hand_dist(hand, cur_h);
     // move back to "old" linked_list and continue
     cur_h = next_h;
   }
