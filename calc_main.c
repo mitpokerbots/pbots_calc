@@ -59,6 +59,7 @@ void choose(Hand* hand, StdDeck_CardMask* cards) {
     cur_h = cur_h->next;
   }
   hand->hand_dist = cur_h->next;
+  StdDeck_CardMask_RESET(*cards);
   *cards = cur_h->cards;
 }
 
@@ -336,6 +337,7 @@ Hand* parse_pocket(const char* hand_text, StdDeck_CardMask dead) {
     free_hand(hand);
     return NULL;
   }
+  hand->text = strdup(hand_text);
   return hand;
 }
 
@@ -353,75 +355,104 @@ int extract_single_cards(char* cards_str, StdDeck_CardMask* cards) {
   return 1;
 }
 
-Hands* get_hands(const char* hand_str, StdDeck_CardMask* dead) {
-  Hands* hands = create_hands();
-  Hand* hand;
+static inline int count_chars(const char* string, char *ch)
+{
+  int count = 0;
+  for(; *string; count += (*string++ == *ch)) ;
+  return count;
+}
 
-  // get all singular (non-ranged) hands
+Hands* get_hands(const char* hand_str, StdDeck_CardMask* dead) {
+  int nhands = count_chars(hand_str, ":")+1;
+  if (nhands < 2) {
+    printf("error: need to specify more than one hand!\n");
+    return NULL;
+  }
+
+  // Extract hand strings
   char* hand_str_copy = strdup(hand_str);
-  printf("get_hands:singular:%s\n", hand_str_copy);
-  int err = 0;
+  char* hand_strings[nhands];
+  int i;
   char *str, *token, *str_save_ptr;
-  for (str = hand_str_copy; ; str=NULL) {
+  for (i=0, str = hand_str_copy; ; str=NULL, i++) {
     token = strtok_r(str, ":", &str_save_ptr);
     if (token == NULL)
       break;
-    pocket_type p = get_pocket_type(token);
+    hand_strings[i] = strdup(token);
+  }
+  free(hand_str_copy);
+  if (i != nhands) {
+    printf("huh? nhands=%d, i=%d\n",nhands, i);
+    return NULL;
+  }
+
+  Hands* hands = create_hands();
+  Hand* hand[nhands];
+
+  // get all singular (non-ranged) hands
+  printf("get_hands:singular:%s\n", hand_str_copy);
+  for (i=0; i<nhands; i++) {
+    pocket_type p = get_pocket_type(hand_strings[i]);
     // TODO: There are cases where range is specified, but because of dead
     // cards, it is reduced to a single possible hand. However, we can't know
     // this until we call parse_pockets...
     if (p == SINGULAR) {
-      if ((hand = parse_pocket(token, *dead)) == NULL) {
-        printf("calc: Improperly formatted singular hand %s\n",token);
-        err = 1;
-        break;
+      if ((hand[i] = parse_pocket(hand_strings[i], *dead)) == NULL) {
+        printf("calc: Improperly formatted singular hand %s\n",hand_strings[i]);
+        goto error;
+      } else if (hand[i]->dist_n != 1) {
+        printf("calc: Found multiple pockets when only one was specified? Saw %s but got ",
+               hand_strings[i]);
+        print_hand_dist(hand[i]);
+        goto error;
       } else {
-        if (hand->dist_n != 1) {
-          printf("calc: Found multiple pockets when only one was specified? Saw %s but got ",
-                 token);
-          print_hand_dist(hand);
-          err = 1;
-          break;
-        } else {
-          insert_hand(hands, hand);
-          // Since we know which cards this hand is, add them to dead cards
-          StdDeck_CardMask_OR(*dead, *dead, hand->hand_dist->cards);
-        }
+        // Since we know which cards this hand is, add them to dead cards
+        StdDeck_CardMask_OR(*dead, *dead, hand[i]->hand_dist->cards);
+        // we don't insert hands until later, to preserve ordering...
       }
     }
-  }
-  free(hand_str_copy);
-  if (err) {
-    free_hands(hands);
-    return NULL;
   }
 
   // get remaining hands
-  char* hand_str_copy2 = strdup(hand_str);
-  printf("get_hands:ranged (%d) %s\n", (int)strlen(hand_str_copy2), hand_str_copy2);
-  char *str_save_ptr2;
-  for (str = hand_str_copy2; ; str=NULL) {
-    token = strtok_r(str, ":", &str_save_ptr2);
-    if (token == NULL)
-      break;
-    pocket_type p = get_pocket_type(token);
+  for (i=0; i<nhands; i++) {
+    pocket_type p = get_pocket_type(hand_strings[i]);
     if (p != SINGULAR) {
-      if ((hand = parse_pocket(token, *dead)) == NULL) {
-        printf("calc: Improperly formatted ranged hand %s\n",token);
-        err = 1;
-        break;
-      } else {
-        insert_hand(hands, hand);
+      if ((hand[i] = parse_pocket(hand_strings[i], *dead)) == NULL) {
+        printf("calc: Improperly formatted ranged hand %s\n",hand_strings[i]);
+        goto error;
       }
     }
-  }
-  free(hand_str_copy2);
-  if (err) {
-    free_hands(hands);
-    return NULL;
+    // insert all hands in order, so we can report back to the user accurately.
+    insert_hand(hands, hand[i]);
   }
 
   return hands;
+
+error:
+  for (i=0; i<nhands; i++) {
+    free(hand_strings[i]);
+  }
+  free_hands(hands);
+  return NULL;
+}
+
+void accumulate_results(Hand_List* h, enum_result_t *result) {
+  int i;
+  Hand_List* cur = h;
+  for (i=0; i<result->nplayers; i++) {
+    cur->hand->ev += result->ev[i];
+    cur = cur->next;
+  }
+}
+
+void print_results(Hands* hands, int iters) {
+  int i;
+  printf("EV:\n");
+  Hand_List* h = hands->hands;
+  for (i=0; i<hands->size; i++) {
+    printf("%s: %8.6f\n", h->hand->text, h->hand->ev / iters);
+    h = h->next;
+  }
 }
 
 int calc(const char* hand_str, char* board_str, char* dead_str, int iters) {
@@ -446,6 +477,69 @@ int calc(const char* hand_str, char* board_str, char* dead_str, int iters) {
   printf("\ndead: ");
   DprintMask(StdDeck, dead);
   printf("\n");
+
+
+  StdDeck_CardMask dead_temp;
+  StdDeck_CardMask pockets[hands->size];
+  enum_result_t result;
+
+  int trials = 0;
+  Hand_List* h = hands->hands;
+  while (trials < iters) {
+    dead_temp = dead;
+    int i;
+    int err = 0;
+    // try to choose pocket cards for this trial
+    for (i=0; i<hands->size; i++) {
+      if (h->hand->dist_n > 1) {
+        if(!choose_D(h->hand, dead_temp, pockets+i)) {
+          err=1;
+          break;
+        }
+        StdDeck_CardMask_OR(dead_temp, dead_temp, pockets[i]);
+      } else {
+        pockets[i] = h->hand->hand_dist->cards;
+      }
+      h = h->next;
+    }
+    if (err) {
+      //printf("encountered collision\n");
+      continue;
+    }
+    /*
+    printf("(%d) ",trials);
+    for (i=0; i<hands->size-1; i++) {
+      DprintMask(StdDeck, pockets[i]);
+      printf(":");
+    }
+    DprintMask(StdDeck, pockets[i]);
+    printf("\n");
+    */
+    int nboard = StdDeck_numCards(board);
+    if (nboard < 5) {
+      //enumResultClear(&result);
+      err = enumSample(game_holdem, pockets, board, dead_temp, hands->size,
+                       nboard, 1, 0, &result);
+    } else {
+      err = enumExhaustive(game_holdem, pockets, board, dead_temp, hands->size,
+                           nboard, 0, &result);
+    }
+    if (err) {
+      printf("enumeration failed, error=%d\n",err);
+      return 0;
+    }
+    accumulate_results(h, &result);
+    //enumResultPrintTerse(&result, pockets, board);
+    trials++;
+    // change which hand gets selected first each loop
+    h=h->next;
+  }
+
+  print_results(hands, iters);
+
+  free_hands(hands);
+  enumResultFree(&result);
+
   return 1;
 }
 
@@ -463,7 +557,7 @@ int main(int argc, char **argv) {
       dead = argv[3];
     }
   }
-  calc(argv[1], board, dead, 10);
+  calc(argv[1], board, dead, 1000000);
   /*
   Hands* hands;
   StdDeck_CardMask dead;

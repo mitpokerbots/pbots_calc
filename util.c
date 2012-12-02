@@ -4,6 +4,7 @@ Hand* create_hand(void) {
   Hand* hand = (Hand*)malloc(sizeof(Hand));
   hand->dist_n = 0;
   hand->randomized = 0;
+  hand->ev = 0.0;
   return hand;
 }
 
@@ -99,6 +100,7 @@ void print_hands(Hands* hands) {
   Hand_List* c = hands->hands;
   int i;
   for (i=0; i<hands->size; i++) {
+    printf("%s: ", c->hand->text);
     print_hand_dist(c->hand);
     c = c->next;
   }
@@ -114,6 +116,7 @@ void free_hand(Hand* hand) {
     free(cur);
     cur = next;
   }
+  free(hand->text);
   free(hand);
 }
 

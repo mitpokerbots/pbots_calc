@@ -18,6 +18,8 @@ typedef struct {
   Hand_Dist* hand_dist;
   int dist_n;
   int randomized;
+  double ev;
+  char* text;
 } Hand;
 
 typedef struct hand_ll hand_ll;
