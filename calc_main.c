@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <time.h>
+#include <limits.h>
 
 #include "util.h"
 
@@ -455,16 +456,46 @@ void print_results(Hands* hands, int iters) {
   }
 }
 
+// nboard is the number of cards on the board
+// ndead is the number of cards that are dead, not including those in hands or
+// on the board.
+unsigned long long num_outcomes_UL(Hands* hands, int nboard, int ndead) {
+  unsigned long long last = 1;
+  unsigned long long total = 1;
+  Hand_List* h = hands->hands;
+  do {
+    total *= h->hand->dist_n;
+    if (last > total) // overflow
+      return ULLONG_MAX;
+    last = total;
+    h = h->next;
+  } while (h != hands->hands);
+
+  int avail_cards = 52 - (hands->size * 2) - nboard - ndead;
+  int i;
+  for (i=0; i<5-nboard; i++) {
+    total *= avail_cards - i;
+    if (last > total) // overflow
+      return ULLONG_MAX;
+    total /= i + 1;
+    last = total;
+  }
+
+  return (total < last) ? ULLONG_MAX : total;
+}
+
 int calc(const char* hand_str, char* board_str, char* dead_str, int iters) {
   StdDeck_CardMask board, dead;
   if (!extract_single_cards(dead_str, &dead)) {
     printf("calc: Improperly formatted dead cards %s\n", dead_str);
     return 0;
   }
+  int ndead = StdDeck_numCards(dead);
   if (!extract_single_cards(board_str, &board)) {
     printf("calc: Improperly formatted board cards %s\n", board_str);
     return 0;
   }
+  int nboard = StdDeck_numCards(board);
   StdDeck_CardMask_OR(dead, dead, board);
 
   Hands* hands;
@@ -477,6 +508,7 @@ int calc(const char* hand_str, char* board_str, char* dead_str, int iters) {
   printf("\ndead: ");
   DprintMask(StdDeck, dead);
   printf("\n");
+  printf("num_coms=%llu\n", num_outcomes_UL(hands, nboard, ndead));
 
 
   StdDeck_CardMask dead_temp;
@@ -515,7 +547,6 @@ int calc(const char* hand_str, char* board_str, char* dead_str, int iters) {
     DprintMask(StdDeck, pockets[i]);
     printf("\n");
     */
-    int nboard = StdDeck_numCards(board);
     if (nboard < 5) {
       //enumResultClear(&result);
       err = enumSample(game_holdem, pockets, board, dead_temp, hands->size,
