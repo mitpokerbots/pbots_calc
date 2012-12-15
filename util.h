@@ -22,6 +22,12 @@ typedef struct {
   char* text;
 } Hand;
 
+typedef struct {
+  Hand_Dist* hand_dist;
+  Hand_Dist* start;
+  Hand* hand;
+} Hand_Dist_Ptr;
+
 typedef struct hand_ll hand_ll;
 typedef struct hand_ll {
   Hand* hand;
@@ -31,7 +37,13 @@ typedef struct hand_ll {
 
 typedef struct {
   Hand_List* hands;
+  // actual size, incremented as hands are added
   int size;
+  // size we expect
+  int e_size;
+  // Used for enumerating all hands - deep pointer into the underlying hand
+  // distributions.
+  Hand_Dist_Ptr** hand_ptrs;
 } Hands;
 
 static int char2rank(char c) {
@@ -64,7 +76,7 @@ static int char2suit(char c) {
 }
 
 Hand* create_hand(void);
-Hands* create_hands(void);
+Hands* create_hands(int);
 void insert_hand(Hands*, Hand*);;
 void insert_hand_dist(Hand*, Hand_Dist*);
 void insert_new(StdDeck_CardMask, Hand*);
@@ -74,5 +86,8 @@ void print_hand_dist(Hand*);
 void print_hands(Hands*);
 void free_hand(Hand*);
 void free_hands(Hands*);
+int get_next_set(Hands*, StdDeck_CardMask*, StdDeck_CardMask*);
+void incr_hand_ptr(Hands*, int);
+int ptr_iter_terminated(Hands*);
 
 #endif

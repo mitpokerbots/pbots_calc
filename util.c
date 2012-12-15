@@ -8,9 +8,11 @@ Hand* create_hand(void) {
   return hand;
 }
 
-Hands* create_hands(void) {
+Hands* create_hands(int nhands) {
   Hands* hands = (Hands*)malloc(sizeof(Hands));
   hands->size = 0;
+  hands->e_size = nhands;
+  hands->hand_ptrs = (Hand_Dist_Ptr**)malloc(sizeof(Hand_Dist_Ptr*) * nhands);
   return hands;
 }
 
@@ -29,7 +31,12 @@ void insert_hand(Hands* hands, Hand* hand) {
     h->prev->next = h;
     hands->hands->prev = h;
   }
-  hands->size += 1;
+  Hand_Dist_Ptr* hdp = (Hand_Dist_Ptr*) malloc(sizeof(Hand_Dist_Ptr));
+  hdp->hand_dist = hand->hand_dist;
+  hdp->start = hand->hand_dist;
+  hdp->hand = hand;
+  hands->hand_ptrs[hands->size] = hdp;
+  hands->size++;
 }
 
 // insert entry into linked list at "tail", as in right before entry pointed to
@@ -130,6 +137,59 @@ void free_hands(Hands* hands) {
     free_hand(cur->hand);
     free(cur);
     cur = next;
+
+    free(hands->hand_ptrs[i]);
   }
+  free(hands->hand_ptrs);
   free(hands);
+}
+
+void incr_hand_ptr(Hands* hands, int hand_index) {
+  if (hand_index < hands->size) {
+    //printf("incrementing pointer index %d\n",hand_index);
+    Hand_Dist_Ptr* ptr=hands->hand_ptrs[hand_index];
+    ptr->hand_dist = ptr->hand_dist->next;
+    if (ptr->hand_dist == ptr->start) {
+      incr_hand_ptr(hands, hand_index+1);
+    }
+  }
+}
+
+int ptr_iter_terminated(Hands* hands) {
+  int i;
+  for (i=0; i<hands->size; i++) {
+    Hand_Dist_Ptr* ptr=hands->hand_ptrs[i];
+    if (ptr->hand_dist != ptr->start)
+      return 0;
+  }
+  return 1;
+}
+
+int get_hand_set(Hands* hands, StdDeck_CardMask* dead, StdDeck_CardMask* pockets) {
+  int i;
+  for (i=0; i<hands->size; i++) {
+    pockets[i] = hands->hand_ptrs[i]->hand_dist->cards;
+    // for singleton hands, we've already added them to the dead cards mask
+    if (hands->hand_ptrs[i]->hand->dist_n > 1) {
+      if (StdDeck_CardMask_ANY_SET(*dead, pockets[i])) {
+        StdDeck_CardMask_RESET(pockets[i]);
+        return 0;
+      }
+      StdDeck_CardMask_OR(*dead, *dead, pockets[i]);
+    }
+  }
+  return 1;
+}
+
+int get_next_set(Hands* hands, StdDeck_CardMask* dead, StdDeck_CardMask* pockets) {
+  StdDeck_CardMask dead_temp = *dead;
+  for (*dead = dead_temp; !get_hand_set(hands, dead, pockets); *dead = dead_temp) {
+    incr_hand_ptr(hands, 0);
+    if (ptr_iter_terminated(hands)) {
+      // we've iterated over entire set of possible hands
+      return 0;
+    }
+    //*dead = dead_temp;
+  }
+  return 1;
 }
