@@ -5,8 +5,7 @@
 #include <time.h>
 #include <limits.h>
 
-#include "util.h"
-#include "calc_interface.h"
+#include "pbots_calc.h"
 
 //#include "inlines\eval.h"
 

@@ -1,5 +1,7 @@
-#ifndef __CALC_INT_H__
-#define __CALC_INT_H__
+#ifndef __PBOTS_CALC_H__
+#define __PBOTS_CALC_H__
+
+#include "util.h"
 
 typedef struct {
   double* ev;
