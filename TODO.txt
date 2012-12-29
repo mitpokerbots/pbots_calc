@@ -1,0 +1,8 @@
+*Implement crazy pineapple poker (3 hole cards)
+*Get working as a shared library - can just be included in projects/bots
+*Get working as python extension module
+*get working with java...as jni? not sure...
+*install depends on poker-eval (c lib) being installed, so verify it exists
+during install
+*see if easy to install poker-eval on windows
+*verify install on mac osx

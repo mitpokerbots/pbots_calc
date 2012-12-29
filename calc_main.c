@@ -6,7 +6,7 @@
 #include <limits.h>
 
 #include "util.h"
-
+#include "calc_interface.h"
 
 //#include "inlines\eval.h"
 
@@ -456,12 +456,55 @@ void accumulate_results(Hand_List* h, enum_result_t *result) {
   }
 }
 
-void print_results(Hands* hands, int iters) {
+Results* alloc_results() {
+  Results* res = (Results*)malloc(sizeof(Results));
+  res->ev = NULL;
+  res->hands = NULL;
+  res->size = 0;
+  res->iters = 0;
+  return res;
+}
+
+void init_results(Results* res, int nhands) {
+  if (res->ev == NULL) {
+    res->ev = (double*)malloc(sizeof(double)*nhands);
+    res->hands = (char**)malloc(sizeof(char*)*nhands);
+    res->iters = 0;
+    res->size = nhands;
+  }
+}
+
+void free_results(Results* res) {
+  if (res->ev != NULL) {
+    int i;
+    for (i=0; i<res->size; i++) {
+      free(res->hands[i]);
+    }
+    free(res->ev);
+  }
+  free(res);
+}
+
+void print_results(Results* res) {
   int i;
-  printf("After %d iterations, EV:\n", iters);
+  if (res->MC) {
+    printf("After %d iterations of Monte Carlo Simulation, EV:\n", res->iters);
+  } else {
+    printf("Enumerated %d cases, EV:\n", res->iters);
+  }
+  for (i=0; i<res->size; i++) {
+    printf("%s: %8.6f\n", res->hands[i], res->ev[i]);
+  }
+}
+
+void finalize_results(Hands* hands, int iters, Results* res, int MC) {
+  int i;
   Hand_List* h = hands->hands;
+  res->iters = iters;
+  res->MC = MC;
   for (i=0; i<hands->size; i++) {
-    printf("%s: %8.6f\n", h->hand->text, h->hand->ev / iters);
+    res->hands[i] = strdup(h->hand->text);
+    res->ev[i] = h->hand->ev / iters;
     h = h->next;
   }
 }
@@ -495,12 +538,12 @@ unsigned long long num_outcomes_UL(Hands* hands, int nboard, int ndead) {
 }
 
 int enumerate(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
-               int nboard) {
+              int nboard, Results* res) {
   StdDeck_CardMask pockets[hands->size];
   enum_result_t result;
   int count = 0;
   StdDeck_CardMask dead_temp = dead;
-  int err, i;
+  int err;
   //while (1) {
   //for (; !ptr_iter_terminated(hands); incr_hand_ptr(hands,0)) {
   do {
@@ -508,6 +551,7 @@ int enumerate(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
       break;
     }
     /*
+    int i;
     printf("(%d) ",count);
     for (i=0; i<hands->size-1; i++) {
       DprintMask(StdDeck, pockets[i]);
@@ -550,13 +594,14 @@ int enumerate(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
     dead_temp = dead;
   }
   */
-  print_results(hands, count);
+  //print_results(hands, count);
+  finalize_results(hands, count, res, 0);
   enumResultFree(&result);
   return 1;
 }
 
 int run_MC(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
-           int nboard, int iters) {
+           int nboard, int iters, Results* res) {
   StdDeck_CardMask pockets[hands->size];
   enum_result_t result;
   StdDeck_CardMask dead_temp;
@@ -592,8 +637,8 @@ int run_MC(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
     DprintMask(StdDeck, pockets[i]);
     printf("\n");
     */
+    enumResultClear(&result);
     if (nboard < 5) {
-      //enumResultClear(&result);
       err = enumSample(game_holdem, pockets, board, dead_temp, hands->size,
                        nboard, 1, 0, &result);
     } else {
@@ -610,12 +655,12 @@ int run_MC(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
     // change which hand gets selected first each loop
     h=h->next;
   }
-  print_results(hands, iters);
+  finalize_results(hands, iters, res, 1);
   enumResultFree(&result);
   return 1;
 }
 
-int calc(const char* hand_str, char* board_str, char* dead_str, int iters) {
+int calc(const char* hand_str, char* board_str, char* dead_str, int iters, Results* res) {
   StdDeck_CardMask board, dead;
   if (!extract_single_cards(dead_str, &dead)) {
     printf("calc: Improperly formatted dead cards %s\n", dead_str);
@@ -641,12 +686,13 @@ int calc(const char* hand_str, char* board_str, char* dead_str, int iters) {
   printf("\n");
   unsigned long long coms = num_outcomes_UL(hands, nboard, ndead);
   printf("num_coms=%llu\n", coms);
+  init_results(res, hands->size);
 
   int err;
   if (coms > iters) {
-    err = run_MC(hands, dead, board, nboard, iters);
+    err = run_MC(hands, dead, board, nboard, iters, res);
   } else {
-    err = enumerate(hands, dead, board, nboard);
+    err = enumerate(hands, dead, board, nboard, res);
   }
 
   free_hands(hands);
@@ -668,7 +714,10 @@ int main(int argc, char **argv) {
       dead = argv[3];
     }
   }
-  calc(argv[1], board, dead, 5000000);
+  Results* res = alloc_results();
+  calc(argv[1], board, dead, 1000000, res);
+  print_results(res);
+  free_results(res);
   /*
   Hands* hands;
   StdDeck_CardMask dead;
