@@ -1,4 +1,10 @@
 *Implement crazy pineapple poker (3 hole cards)
+  + dist over 3 cards, for each hand, need to do 6 combos (for 2 players)
+  (question for how to handle in mc?)
+  + or is it just need to add an additional layer (for mc) to select 2-card
+  hands for both players?...
+  + Need to extend code to handle 3 card dists...and still handle 2 card...
+    - allow mixed?
 *Get working as a shared library - can just be included in projects/bots
 *Get working as python extension module
 *get working with java...as jni? not sure...
@@ -6,3 +12,4 @@
 during install
 *see if easy to install poker-eval on windows
 *verify install on mac osx
+* remove verbosity

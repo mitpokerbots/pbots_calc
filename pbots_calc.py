@@ -29,7 +29,8 @@ def calc(hands, board, dead, iters):
     if err > 0:
         #pcalc.print_results(res)
         results = Results(_Results.from_address(res))
-        pcalc.free_results(res)
-        return results
-    print "error: could not parse input or something..."
-    return None
+    else:
+        print "error: could not parse input or something..."
+        results = None
+    pcalc.free_results(res)
+    return results
