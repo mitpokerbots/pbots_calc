@@ -2,6 +2,7 @@
 #define __UTIL_H__
 
 #include <ctype.h>
+#include <stdio.h>
 
 #include "enumdefs.h"
 #include "poker_defs.h"

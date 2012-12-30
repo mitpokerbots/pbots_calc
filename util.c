@@ -123,6 +123,7 @@ void free_hand(Hand* hand) {
     free(cur);
     cur = next;
   }
+  printf("freeing %s\n", hand->text);
   free(hand->text);
   free(hand);
 }

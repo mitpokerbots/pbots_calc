@@ -4,8 +4,10 @@
 #include <string.h>
 #include <time.h>
 #include <limits.h>
+//#include <poker-eval>
 
 #include "pbots_calc.h"
+#include "util.h"
 
 //#include "inlines\eval.h"
 
@@ -333,11 +335,11 @@ Hand* parse_pocket(const char* hand_text, StdDeck_CardMask dead) {
     }
   }
   free(hand_text_copy);
+  hand->text = strdup(hand_text);
   if (hand->dist_n == 0 || err) {
     free_hand(hand);
     return NULL;
   }
-  hand->text = strdup(hand_text);
   return hand;
 }
 
@@ -480,6 +482,7 @@ void free_results(Results* res) {
       free(res->hands[i]);
     }
     free(res->ev);
+    free(res->hands);
   }
   free(res);
 }
@@ -660,6 +663,7 @@ int run_MC(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
 }
 
 int calc(const char* hand_str, char* board_str, char* dead_str, int iters, Results* res) {
+  srand(time(NULL));
   StdDeck_CardMask board, dead;
   if (!extract_single_cards(dead_str, &dead)) {
     printf("calc: Improperly formatted dead cards %s\n", dead_str);
@@ -700,7 +704,6 @@ int calc(const char* hand_str, char* board_str, char* dead_str, int iters, Resul
 }
 
 int main(int argc, char **argv) {
-  srand(time(NULL));
   if (argc < 2) {
     printf("usage: %s hand1:hand2:hand... [board [dead]]\n", argv[0]);
     return 0;
