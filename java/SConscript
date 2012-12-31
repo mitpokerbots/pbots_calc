@@ -1,0 +1,5 @@
+#!/bin/python
+
+env = Environment()
+env.Append(JAVACLASSPATH=["java/jnaerator-0.11-SNAPSHOT-20121008.jar"])
+env.Java('bin','.')

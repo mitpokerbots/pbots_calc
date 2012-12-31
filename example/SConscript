@@ -1,0 +1,4 @@
+#!/bin/python
+
+Import("env")
+env.Program(target="calculator",source=["calculator.c"], LIBS=['pbots_calc','poker-eval'])

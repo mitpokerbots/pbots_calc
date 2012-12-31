@@ -1,0 +1,46 @@
+Index: Makefile.am
+===================================================================
+--- Makefile.am	(revision 6581)
++++ Makefile.am	(working copy)
+@@ -33,7 +33,6 @@
+ 	config/gcov.m4 \
+ 	examples/Makefile.dos \
+ 	include/Makefile.dos \
+-	java/Makefile.dos \
+ 	lib/Makefile.dos \
+ 	tests/Makefile.dos \
+ 	mktab_astud.vcproj \
+@@ -46,19 +45,9 @@
+ 	poker-eval.sln \
+ 	WHATS-HERE.Java \
+ 	WHATS-HERE \
+-	gentoo/dev-games/poker-eval/poker-eval-133.0-r1.ebuild \
+-	csharp/API.cs \
+-	csharp/Enum.cs \
+-	csharp/EnumResult.cs \
+-	csharp/GameParams.cs \
+-	csharp/StdDeck.cs \
+-	csharp/Test.cs \
+-	csharp/Makefile \
+-	csharp/TODO \
+ 	packaging-farm.bat \
+ 	poker-eval.nsi \
+-	make_master.sh \
+-	fink/libpoker-eval.info
++	make_master.sh
+ 
+ SUBDIRS = \
+ 	lib \
+Index: include/rules_std.h
+===================================================================
+--- include/rules_std.h	(revision 6581)
++++ include/rules_std.h	(working copy)
+@@ -27,7 +27,7 @@
+ #ifndef __RULES_STD_H__
+ #define __RULES_STD_H__
+ 
+-#include <pokereval_export.h>
++#include "pokereval_export.h"
+ 
+ #define StdRules_HandType_NOPAIR    0
+ #define StdRules_HandType_ONEPAIR   1

@@ -1,0 +1,7 @@
+#!/bin/python
+
+Import("env")
+pbots_calc = env.SharedLibrary(target="pbots_calc",source=["pbots_calc.c","util.c"],
+                  LIBS=['poker-eval'])
+env.Install("/usr/local/lib", pbots_calc)
+env.Install("/usr/local/include/pbots_calc", "pbots_calc.h")
