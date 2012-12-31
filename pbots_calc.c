@@ -4,13 +4,9 @@
 #include <string.h>
 #include <time.h>
 #include <limits.h>
-//#include <poker-eval>
 
 #include "pbots_calc.h"
 #include "util.h"
-
-//#include "inlines\eval.h"
-
 
 typedef enum {
   ERROR,

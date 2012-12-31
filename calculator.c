@@ -1,5 +1,5 @@
-#include "pbots_calc.h"
 #include <stdio.h>
+#include <pbots_calc/pbots_calc.h>
 
 int main(int argc, char **argv) {
   if (argc < 2) {

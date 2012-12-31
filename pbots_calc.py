@@ -2,8 +2,8 @@
 
 import ctypes
 
-peval = ctypes.CDLL('../PEC/poker-eval/lib/.libs/libpoker-eval.so')
-pcalc = ctypes.CDLL('./libpbots_calc.so')
+peval = ctypes.CDLL('libpoker-eval.so')
+pcalc = ctypes.CDLL('libpbots_calc.so')
 
 class _Results(ctypes.Structure):
     _fields_ = [("ev", ctypes.POINTER(ctypes.c_double)),
