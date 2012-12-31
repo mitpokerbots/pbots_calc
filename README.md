@@ -3,9 +3,18 @@ equity-calculator
 
 Ranged Equity Calculator
 
+Abstract: Open source implementation of something like pokerstove! For C, Java and Python!
+
+This is basically a pokerstove-esque equity calculator for regular texas
+hold'em. It handles mostly the same hand range-syntax as pokerstove, and handles
+any number of players. It's built around the poker-eval library, and provides
+python and java wrappers around the c library code. For comparison, my guess is
+that it runs about 10x slower than pokerstove, which isn't bad considering
+there's no lookup tables or anything.
+
 WARNING: Only tested on Ubuntu 12.04 - should work on 11.04 or later, but only guessing
 
-installation
+Installation
 ============
 
 First, required other libraries.
