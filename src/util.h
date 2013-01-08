@@ -20,14 +20,18 @@ typedef struct {
   int randomized;
   double ev;
   char* text;
-  // is this a distribution over 2 or 3 hole-card hands?
-  int num_hole_cards;
+  // How many combinations of 2-card hands are contained in this hand? (either 1
+  // or 3)
+  int coms;
 } Hand;
 
 typedef struct {
   Hand_Dist* hand_dist;
   Hand_Dist* start;
   Hand* hand;
+  // for 3-card hand ranges, we need to be sure to hit each of the 3 possible
+  // combinations of 2 hole cards when enumerating
+  int discard_ptr;
 } Hand_Dist_Ptr;
 
 typedef struct hand_ll hand_ll;
@@ -88,8 +92,9 @@ void print_hand_dist(Hand*);
 void print_hands(Hands*);
 void free_hand(Hand*);
 void free_hands(Hands*);
+void discard_card(StdDeck_CardMask*, int);
 int get_next_set(Hands*, StdDeck_CardMask*, StdDeck_CardMask*);
-void incr_hand_ptr(Hands*, int);
+void incr_hand_ptr(Hands*);
 int ptr_iter_terminated(Hands*);
 
 #endif

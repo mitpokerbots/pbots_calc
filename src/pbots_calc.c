@@ -78,14 +78,7 @@ int choose_D(Hand* hand, StdDeck_CardMask dead, StdDeck_CardMask* cards) {
 
 // Select 2 hole cards from hand of 3 cards - unset the discarded card in place!
 void choose_2(StdDeck_CardMask* three_pocket) {
-  int discard = rand()%3 + 1;
-  int i;
-  for (i=0; i<StdDeck_N_CARDS && discard > 0; i++) {
-    if (StdDeck_CardMask_CARD_IS_SET(*three_pocket, i)) {
-      discard--;
-    }
-  }
-  StdDeck_CardMask_UNSET(*three_pocket, i);
+  discard_card(three_pocket, rand()%3 + 1);
 }
 
 pocket_type get_pocket_type(const char* pocket) {
@@ -199,7 +192,7 @@ int extract_cards_singular(char* cards, Hand* hand, StdDeck_CardMask dead) {
       return 0;
     }
     StdDeck_CardMask_SET(pocket, card);
-    hand->num_hole_cards = 3;
+    hand->coms = 3;
   }
   if (StdDeck_CardMask_ANY_SET(dead, pocket)) {
     printf("R1: in dead cards\n");
@@ -217,7 +210,7 @@ void extract_cards_random2(Hand* hand, StdDeck_CardMask dead) {
 void extract_cards_random3(Hand* hand, StdDeck_CardMask dead) {
   StdDeck_CardMask curHand;
   DECK_ENUMERATE_3_CARDS_D(StdDeck, curHand, dead, insert_new(curHand, hand););
-  hand->num_hole_cards = 3;
+  hand->coms = 3;
 }
 
 int extract_cards_pair(char* cards, Hand* hand, StdDeck_CardMask dead) {
@@ -522,6 +515,10 @@ Hands* get_hands(const char* hand_str, StdDeck_CardMask* dead) {
       if ((hand[i] = parse_pocket(hand_strings[i], *dead)) == NULL) {
         printf("calc: Improperly formatted ranged hand %s\n",hand_strings[i]);
         goto error;
+      } else if (hand[i]->dist_n == 1) {
+        // Since we know which cards this hand is, add them to dead cards
+        StdDeck_CardMask_OR(*dead, *dead, hand[i]->hand_dist->cards);
+        // we don't insert hands until later, to preserve ordering...
       }
     }
     // insert all hands in order, so we can report back to the user accurately.
@@ -619,22 +616,21 @@ unsigned long long num_outcomes_UL(Hands* hands, int nboard, int ndead) {
   int i;
   int avail_cards = 52 - nboard - ndead;
   Hand_List* h = hands->hands;
-  // total *= product (taken over all dists) of (size of dist *
-  // (dist->num_hole_cards choose 2))
+
+  // total *= product (taken over all dists) of (size of dist * dist->coms)
   do {
     total *= h->hand->dist_n;
     if (last > total) // overflow
       return ULLONG_MAX;
     last = total;
-    if (h->hand->num_hole_cards == 3) {
-      total *= 3;
-      if (last > total) // overflow
-        return ULLONG_MAX;
-      last = total;
-    }
-    avail_cards -= h->hand->num_hole_cards;
+    total *= h->hand->coms;
+    if (last > total) // overflow
+      return ULLONG_MAX;
+    last = total;
+    avail_cards -= StdDeck_numCards(h->hand->hand_dist->cards);
     h = h->next;
   } while (h != hands->hands);
+
   // total *= avail_cards choose (5-nboard)
   for (i=0; i<5-nboard; i++) {
     total *= avail_cards - i;
@@ -656,6 +652,7 @@ int enumerate(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
   int err;
   do {
     if (!get_next_set(hands,&dead_temp,pockets)) {
+      // we've finished iterating over entire set
       break;
     }
     /*
@@ -677,7 +674,7 @@ int enumerate(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
     accumulate_results(hands->hands, &result);
     count+= result.nsamples;
     dead_temp = dead;
-    incr_hand_ptr(hands,0);
+    incr_hand_ptr(hands);
   } while(!ptr_iter_terminated(hands));
 
   finalize_results(hands, count, res, 0);
@@ -709,7 +706,7 @@ int run_MC(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
       } else {
         temp_pocket = h->hand->hand_dist->cards;
       }
-      if (h->hand->num_hole_cards == 3) {
+      if (h->hand->coms == 3) {
         choose_2(&temp_pocket);
       }
       pockets[i] = temp_pocket;

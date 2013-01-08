@@ -7,7 +7,7 @@ Hand* create_hand(void) {
   hand->dist_n = 0;
   hand->randomized = 0;
   hand->ev = 0.0;
-  hand->num_hole_cards = 2;
+  hand->coms = 1;
   return hand;
 }
 
@@ -39,6 +39,7 @@ void insert_hand(Hands* hands, Hand* hand) {
   hdp->hand_dist = hand->hand_dist;
   hdp->start = hand->hand_dist;
   hdp->hand = hand;
+  hdp->discard_ptr = hand->coms;
   hands->hand_ptrs[hands->size] = hdp;
   hands->size++;
 }
@@ -149,30 +150,53 @@ void free_hands(Hands* hands) {
   free(hands);
 }
 
-void incr_hand_ptr(Hands* hands, int hand_index) {
+void incr_hand_ptr_r(Hands* hands, int hand_index) {
   if (hand_index < hands->size) {
     //printf("incrementing pointer index %d\n",hand_index);
     Hand_Dist_Ptr* ptr=hands->hand_ptrs[hand_index];
-    ptr->hand_dist = ptr->hand_dist->next;
-    if (ptr->hand_dist == ptr->start) {
-      incr_hand_ptr(hands, hand_index+1);
+    if (--ptr->discard_ptr <= 0) {
+      ptr->discard_ptr = ptr->hand->coms;
+      ptr->hand_dist = ptr->hand_dist->next;
+      if (ptr->hand_dist == ptr->start) {
+        incr_hand_ptr_r(hands, hand_index+1);
+      }
     }
   }
 }
 
+void incr_hand_ptr(Hands* hands) {
+  incr_hand_ptr_r(hands, 0);
+}
+
+// ptr is reset when it's at virtual 0
 int ptr_iter_terminated(Hands* hands) {
   int i;
   for (i=0; i<hands->size; i++) {
     Hand_Dist_Ptr* ptr=hands->hand_ptrs[i];
     if (ptr->hand_dist != ptr->start)
       return 0;
+    else if (ptr->discard_ptr != ptr->hand->coms)
+      return 0;
   }
   return 1;
+}
+
+// discard (unset) specified card from given hand
+void discard_card(StdDeck_CardMask* hand, int discard_index) {
+  int i;
+  for (i=0; i<StdDeck_N_CARDS && discard_index > 0; i++) {
+    if (StdDeck_CardMask_CARD_IS_SET(*hand, i)) {
+      discard_index--;
+    }
+  }
+  //printf("discarding %s\n", StdDeck_cardString(i-1));
+  StdDeck_CardMask_UNSET(*hand, i-1);
 }
 
 int get_hand_set(Hands* hands, StdDeck_CardMask* dead, StdDeck_CardMask* pockets) {
   int i;
   for (i=0; i<hands->size; i++) {
+    StdDeck_CardMask_RESET(pockets[i]);
     pockets[i] = hands->hand_ptrs[i]->hand_dist->cards;
     // for singleton hands, we've already added them to the dead cards mask
     if (hands->hand_ptrs[i]->hand->dist_n > 1) {
@@ -182,19 +206,26 @@ int get_hand_set(Hands* hands, StdDeck_CardMask* dead, StdDeck_CardMask* pockets
       }
       StdDeck_CardMask_OR(*dead, *dead, pockets[i]);
     }
+    if (StdDeck_numCards(hands->hand_ptrs[i]->start->cards) > 2) {
+      // we treat all 3 cards as dead, but the player can only use 2 of them.
+      discard_card(pockets+i, hands->hand_ptrs[i]->discard_ptr);
+    }
   }
   return 1;
 }
 
 int get_next_set(Hands* hands, StdDeck_CardMask* dead, StdDeck_CardMask* pockets) {
   StdDeck_CardMask dead_temp = *dead;
-  for (*dead = dead_temp; !get_hand_set(hands, dead, pockets); *dead = dead_temp) {
-    incr_hand_ptr(hands, 0);
+
+  // iterate until we get a possible hand (taking into account dead cards)
+  // or we reach the end of the set of hands.
+  while (!get_hand_set(hands, dead, pockets)) {
+    incr_hand_ptr(hands);
     if (ptr_iter_terminated(hands)) {
       // we've iterated over entire set of possible hands
       return 0;
     }
-    //*dead = dead_temp;
+    *dead = dead_temp;
   }
   return 1;
 }
