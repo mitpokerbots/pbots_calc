@@ -20,6 +20,8 @@ typedef struct {
   int randomized;
   double ev;
   char* text;
+  // is this a distribution over 2 or 3 hole-card hands?
+  int num_hole_cards;
 } Hand;
 
 typedef struct {

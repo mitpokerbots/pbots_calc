@@ -1,7 +1,7 @@
 #ifndef __PBOTS_CALC_H__
 #define __PBOTS_CALC_H__
 
-//#define VERBOSE
+#define VERBOSE
 
 #if defined(_MSC_VER) || defined(__CYGWIN__) || defined(__MINGW32__) || defined( __BCPLUSPLUS__)  || defined( __MWERKS__)
   #define EXPORT_DLL_FLAG __declspec(dllexport)

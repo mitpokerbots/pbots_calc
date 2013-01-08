@@ -11,7 +11,9 @@
 typedef enum {
   ERROR,
   SINGULAR,
+  SINGULAR_3,
   RAND,
+  RAND_3,
   PAIR,
   SUITED,
   OFFSUIT,
@@ -75,12 +77,17 @@ int choose_D(Hand* hand, StdDeck_CardMask dead, StdDeck_CardMask* cards) {
 
 pocket_type get_pocket_type(const char* pocket) {
   size_t n_p = strlen(pocket);
-  unsigned int i;
+  unsigned int i, j;
 #ifdef VERBOSE
   printf("strlen: %d\n", (int)strlen(pocket));
 #endif
-  if (strchr("x", tolower(pocket[0])) != NULL)
-    return RAND;
+  if (strchr("x", tolower(pocket[0])) != NULL) {
+    if (n_p == 3) {
+      return RAND_3;
+    } else {
+      return RAND;
+    }
+  }
   // filter out blatant errors in input
   for (i=0; i<n_p; i++) {
     if (strchr("23456789TJQKA+-SHDCO", toupper(pocket[i])) == NULL)
@@ -88,13 +95,16 @@ pocket_type get_pocket_type(const char* pocket) {
   }
   if (n_p < 2)
     return ERROR;
-
+  // First char should be card rank, always
   if (strchr("23456789TJQKA", toupper(pocket[0])) == NULL)
     return ERROR;
+
+  // now filter out singular cases
   if (n_p == 4) {
     if (strchr("SHDC", toupper(pocket[1])) != NULL &&
         strchr("SHDC", toupper(pocket[3])) != NULL &&
         strchr("23456789TJQKA", toupper(pocket[2])) != NULL) {
+      // Error if specify same card twice
       if (pocket[0] == pocket[2] && pocket[1] == pocket[3]) {
         return ERROR;
       } else {
@@ -102,6 +112,24 @@ pocket_type get_pocket_type(const char* pocket) {
       }
     }
   }
+  if (n_p == 6) {
+    if (strchr("SHDC", toupper(pocket[1])) != NULL &&
+        strchr("SHDC", toupper(pocket[3])) != NULL &&
+        strchr("SHDC", toupper(pocket[5])) != NULL &&
+        strchr("23456789TJQKA", toupper(pocket[2])) != NULL &&
+        strchr("23456789TJQKA", toupper(pocket[4])) != NULL) {
+      // Error if specify same card twice
+      for (i=0; i<=2; i=i+2) {
+        for (j=i+2; j<=4; j=j+2) {
+          if (pocket[i] == pocket[j] && pocket[i+1] == pocket[j+1]) {
+            return ERROR;
+          }
+        }
+      }
+      return SINGULAR_3;
+    }
+  }
+
   // final sanity check for remaining cases
   if (strchr("23456789TJQKA", toupper(pocket[1])) == NULL)
     return ERROR;
@@ -139,6 +167,7 @@ pocket_type get_pocket_type(const char* pocket) {
 int extract_cards_singular(char* cards, Hand* hand, StdDeck_CardMask dead) {
   int card;
   StdDeck_CardMask pocket;
+  size_t n_p = strlen(cards);
   StdDeck_CardMask_RESET(pocket);
 
   if (!DstringToCard(StdDeck, cards, &card)) {
@@ -151,6 +180,14 @@ int extract_cards_singular(char* cards, Hand* hand, StdDeck_CardMask dead) {
     return 0;
   }
   StdDeck_CardMask_SET(pocket, card);
+  if (n_p > 4) {
+    if (!DstringToCard(StdDeck, cards+4, &card)) {
+      printf("R1: parsing card3 failed\n");
+      return 0;
+    }
+    StdDeck_CardMask_SET(pocket, card);
+    hand->num_hole_cards = 3;
+  }
   if (StdDeck_CardMask_ANY_SET(dead, pocket)) {
     printf("R1: in dead cards\n");
     return 1;
@@ -159,9 +196,15 @@ int extract_cards_singular(char* cards, Hand* hand, StdDeck_CardMask dead) {
   return 1;
 }
 
-void extract_cards_random(Hand* hand, StdDeck_CardMask dead) {
+void extract_cards_random2(Hand* hand, StdDeck_CardMask dead) {
   StdDeck_CardMask curHand;
   DECK_ENUMERATE_2_CARDS_D(StdDeck, curHand, dead, insert_new(curHand, hand););
+}
+
+void extract_cards_random3(Hand* hand, StdDeck_CardMask dead) {
+  StdDeck_CardMask curHand;
+  DECK_ENUMERATE_3_CARDS_D(StdDeck, curHand, dead, insert_new(curHand, hand););
+  hand->num_hole_cards = 3;
 }
 
 int extract_cards_pair(char* cards, Hand* hand, StdDeck_CardMask dead) {
@@ -312,25 +355,39 @@ Hand* parse_pocket(const char* hand_text, StdDeck_CardMask dead) {
 #ifdef VERBOSE
     printf("here3 %d\n", p);
 #endif
-    if (p == SINGULAR) {
+    if (p == SINGULAR || p == SINGULAR_3) {
       if (!extract_cards_singular(token, hand, dead)) {
         err = 1;
         break;
       }
     } else if (p == RAND) {
-      extract_cards_random(hand, dead);
+      extract_cards_random2(hand, dead);
+    } else if (p == RAND_3) {
+      extract_cards_random3(hand, dead);
     } else if (p == PAIR) {
       if (!extract_cards_pair(token, hand, dead)) {
         err = 1;
         break;
       }
     } else if (p == SUITED) {
-      extract_cards_suited(token, hand, dead);
+      if (!extract_cards_suited(token, hand, dead)) {
+        err = 1;
+        break;
+      }
     } else if (p == OFFSUIT) {
-      extract_cards_offsuit(token, hand, dead);
+      if (!extract_cards_offsuit(token, hand, dead)) {
+        err = 1;
+        break;
+      }
     } else if (p == NONE) {
-      extract_cards_suited(token, hand, dead);
-      extract_cards_offsuit(token, hand, dead);
+      if (!extract_cards_suited(token, hand, dead)) {
+        err = 1;
+        break;
+      }
+      if (!extract_cards_offsuit(token, hand, dead)) {
+        err = 1;
+        break;
+      }
     } else {
       err = 1;
       break;
@@ -394,7 +451,7 @@ Hands* get_hands(const char* hand_str, StdDeck_CardMask* dead) {
     for (i=0; i<nhands; i++) {
       free(hand_strings[i]);
     }
-	free(hand_strings);
+    free(hand_strings);
     return NULL;
   }
 
@@ -410,7 +467,7 @@ Hands* get_hands(const char* hand_str, StdDeck_CardMask* dead) {
     // TODO: There are cases where range is specified, but because of dead
     // cards, it is reduced to a single possible hand. However, we can't know
     // this until we call parse_pockets...
-    if (p == SINGULAR) {
+    if (p == SINGULAR || p == SINGULAR_3) {
       if ((hand[i] = parse_pocket(hand_strings[i], *dead)) == NULL) {
         printf("calc: Improperly formatted singular hand %s\n",hand_strings[i]);
         goto error;
@@ -430,7 +487,7 @@ Hands* get_hands(const char* hand_str, StdDeck_CardMask* dead) {
   // get remaining hands
   for (i=0; i<nhands; i++) {
     pocket_type p = get_pocket_type(hand_strings[i]);
-    if (p != SINGULAR) {
+    if (p != SINGULAR && p != SINGULAR_3) {
       if ((hand[i] = parse_pocket(hand_strings[i], *dead)) == NULL) {
         printf("calc: Improperly formatted ranged hand %s\n",hand_strings[i]);
         goto error;

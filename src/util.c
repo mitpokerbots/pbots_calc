@@ -7,6 +7,7 @@ Hand* create_hand(void) {
   hand->dist_n = 0;
   hand->randomized = 0;
   hand->ev = 0.0;
+  hand->num_hole_cards = 2;
   return hand;
 }
 
