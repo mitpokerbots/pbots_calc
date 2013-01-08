@@ -30,9 +30,9 @@ void randomize(Hand* hand) {
   // perform operation in place, so start by tricking hand into thinking it's
   // empty
   int j = hand->dist_n;
+  int i = 0;
   hand->dist_n = 0;
 
-  int i;
   for (; j>0; j--) {
     for (i=rand()%j; i>=0; i--) {
       cur_h = cur_h->next;
@@ -74,14 +74,14 @@ int choose_D(Hand* hand, StdDeck_CardMask dead, StdDeck_CardMask* cards) {
 }
 
 pocket_type get_pocket_type(const char* pocket) {
+  size_t n_p = strlen(pocket);
+  unsigned int i;
 #ifdef VERBOSE
   printf("strlen: %d\n", (int)strlen(pocket));
 #endif
   if (strchr("x", tolower(pocket[0])) != NULL)
     return RAND;
-  size_t n_p = strlen(pocket);
   // filter out blatant errors in input
-  int i;
   for (i=0; i<n_p; i++) {
     if (strchr("23456789TJQKA+-SHDCO", toupper(pocket[i])) == NULL)
       return ERROR;
@@ -137,9 +137,9 @@ pocket_type get_pocket_type(const char* pocket) {
 }
 
 int extract_cards_singular(char* cards, Hand* hand, StdDeck_CardMask dead) {
+  int card;
   StdDeck_CardMask pocket;
   StdDeck_CardMask_RESET(pocket);
-  int card;
 
   if (!DstringToCard(StdDeck, cards, &card)) {
     printf("R1: parsing card1 failed\n");
@@ -168,6 +168,8 @@ int extract_cards_pair(char* cards, Hand* hand, StdDeck_CardMask dead) {
   // extract limits to possible ranges
   int ceil = char2rank(cards[0]);
   int floor = char2rank(cards[0]);
+  StdDeck_CardMask pocket;
+  int rank, suit1, suit2;
   if (strchr(cards, '-') != NULL) {
     if ((floor = char2rank(cards[3])) < 0) {
       return 0;
@@ -185,9 +187,7 @@ int extract_cards_pair(char* cards, Hand* hand, StdDeck_CardMask dead) {
     return 0;
   }
 
-  StdDeck_CardMask pocket;
   // enumerate all cards in range
-  int rank, suit1, suit2;
   for (rank=floor; rank <= ceil; rank++) {
     for(suit1 = StdDeck_Suit_FIRST; suit1 <= StdDeck_Suit_LAST; suit1++) {
       for (suit2 = suit1 + 1; suit2 <= StdDeck_Suit_LAST; suit2++) {
@@ -208,10 +208,10 @@ int extract_bounds(char* cards, int* floor, int* ceil, int* rank) {
   // highest card is always fixed, must appear in both limits (if range)
   int rank1 = char2rank(cards[0]);
   int rank2 = char2rank(cards[1]);
+  int high_index = 0;
   if (rank1 < 0 || rank2 < 0) {
     return 0;
   }
-  int high_index = 0;
   if (rank2 > rank1) {
     high_index = 1;
     rank1 = rank2;
@@ -245,13 +245,13 @@ int extract_bounds(char* cards, int* floor, int* ceil, int* rank) {
 }
 int extract_cards_suited(char* cards, Hand* hand, StdDeck_CardMask dead) {
   int floor, ceil, rank1;
+  StdDeck_CardMask pocket;
+  int rank2, suit;
   if (!extract_bounds(cards, &floor, &ceil, &rank1)) {
     return 0;
   }
 
-  StdDeck_CardMask pocket;
   // enumerate all cards in range
-  int rank2, suit;
   for (rank2=floor; rank2 <= ceil; rank2++) {
     for(suit = StdDeck_Suit_FIRST; suit <= StdDeck_Suit_LAST; suit++) {
       if (rank1 == rank2)
@@ -270,13 +270,13 @@ int extract_cards_suited(char* cards, Hand* hand, StdDeck_CardMask dead) {
 
 int extract_cards_offsuit(char* cards, Hand* hand, StdDeck_CardMask dead) {
   int floor, ceil, rank1;
+  StdDeck_CardMask pocket;
+  int rank2, suit1, suit2;
   if (!extract_bounds(cards, &floor, &ceil, &rank1)) {
     return 0;
   }
 
-  StdDeck_CardMask pocket;
   // enumerate all cards in range
-  int rank2, suit1, suit2;
   for (rank2=floor; rank2 <= ceil; rank2++) {
     for(suit1 = StdDeck_Suit_FIRST; suit1 <= StdDeck_Suit_LAST; suit1++) {
       for(suit2 = StdDeck_Suit_FIRST; suit2 <= StdDeck_Suit_LAST; suit2++) {
@@ -296,18 +296,19 @@ int extract_cards_offsuit(char* cards, Hand* hand, StdDeck_CardMask dead) {
 }
 
 Hand* parse_pocket(const char* hand_text, StdDeck_CardMask dead) {
-  char* hand_text_copy = strdup(hand_text);
-#ifdef VERBOSE
-  printf("parse_pocket %s\n",hand_text);
-#endif
   Hand* hand = create_hand();
   int err = 0;
   char *str, *token, *str_save_ptr;
+  char* hand_text_copy = strdup(hand_text);
+  pocket_type p;
+#ifdef VERBOSE
+  printf("parse_pocket %s\n",hand_text);
+#endif
   for (str = hand_text_copy; ; str=NULL) {
-    token = strtok_r(str, ",", &str_save_ptr);
+    token = STRTOK(str, ",", &str_save_ptr);
     if (token == NULL)
       break;
-    pocket_type p = get_pocket_type(token);
+    p = get_pocket_type(token);
 #ifdef VERBOSE
     printf("here3 %d\n", p);
 #endif
@@ -345,9 +346,9 @@ Hand* parse_pocket(const char* hand_text, StdDeck_CardMask dead) {
 }
 
 int extract_single_cards(char* cards_str, StdDeck_CardMask* cards) {
-  StdDeck_CardMask_RESET(*cards);
-  int i;
+  unsigned int i;
   int card;
+  StdDeck_CardMask_RESET(*cards);
   for (i=0; i<strlen(cards_str); i+=2) {
     if (!DstringToCard(StdDeck, cards_str+i, &card)) {
       printf("R1: parsing card1 failed\n");
@@ -366,19 +367,23 @@ static inline int count_chars(const char* string, char *ch)
 }
 
 Hands* get_hands(const char* hand_str, StdDeck_CardMask* dead) {
-  int nhands = count_chars(hand_str, ":")+1;
+  const int nhands = count_chars(hand_str, ":")+1;
+  char* hand_str_copy;
+  char** hand_strings = (char**) malloc(sizeof(char*) * nhands);
+  int i;
+  char *str, *token, *str_save_ptr;
+  Hands* hands;
+  Hand** hand;
+  pocket_type p;
   if (nhands < 2) {
     printf("error: need to specify more than one hand!\n");
     return NULL;
   }
 
   // Extract hand strings
-  char* hand_str_copy = strdup(hand_str);
-  char* hand_strings[nhands];
-  int i;
-  char *str, *token, *str_save_ptr;
+  hand_str_copy = strdup(hand_str);
   for (i=0, str = hand_str_copy; ; str=NULL, i++) {
-    token = strtok_r(str, ":", &str_save_ptr);
+    token = STRTOK(str, ":", &str_save_ptr);
     if (token == NULL)
       break;
     hand_strings[i] = strdup(token);
@@ -389,18 +394,19 @@ Hands* get_hands(const char* hand_str, StdDeck_CardMask* dead) {
     for (i=0; i<nhands; i++) {
       free(hand_strings[i]);
     }
+	free(hand_strings);
     return NULL;
   }
 
-  Hands* hands = create_hands(nhands);
-  Hand* hand[nhands];
+ hand = (Hand**) malloc(sizeof(Hand*) * nhands);
+ hands = create_hands(nhands);
 
   // get all singular (non-ranged) hands
 #ifdef VERBOSE
   printf("get_hands:singular:%s\n", hand_str_copy);
 #endif
   for (i=0; i<nhands; i++) {
-    pocket_type p = get_pocket_type(hand_strings[i]);
+    p = get_pocket_type(hand_strings[i]);
     // TODO: There are cases where range is specified, but because of dead
     // cards, it is reduced to a single possible hand. However, we can't know
     // this until we call parse_pockets...
@@ -446,13 +452,15 @@ error:
   for (i=0; i<nhands; i++) {
     free(hand_strings[i]);
   }
+  free(hand_strings);
   free_hands(hands);
+  free(hand);
   return NULL;
 }
 
 // record intermediate results
 void accumulate_results(Hand_List* h, enum_result_t *result) {
-  int i;
+  unsigned int i;
   Hand_List* cur = h;
   for (i=0; i<result->nplayers; i++) {
     cur->hand->ev += result->ev[i];
@@ -520,6 +528,7 @@ void finalize_results(Hands* hands, int iters, Results* res, int MC) {
 unsigned long long num_outcomes_UL(Hands* hands, int nboard, int ndead) {
   unsigned long long last = 1;
   unsigned long long total = 1;
+  int i, avail_cards;
   Hand_List* h = hands->hands;
   do {
     total *= h->hand->dist_n;
@@ -529,8 +538,7 @@ unsigned long long num_outcomes_UL(Hands* hands, int nboard, int ndead) {
     h = h->next;
   } while (h != hands->hands);
 
-  int avail_cards = 52 - (hands->size * 2) - nboard - ndead;
-  int i;
+  avail_cards = 52 - (hands->size * 2) - nboard - ndead;
   for (i=0; i<5-nboard; i++) {
     total *= avail_cards - i;
     if (last > total) // overflow
@@ -544,7 +552,7 @@ unsigned long long num_outcomes_UL(Hands* hands, int nboard, int ndead) {
 
 int enumerate(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
               int nboard, Results* res) {
-  StdDeck_CardMask pockets[hands->size];
+  StdDeck_CardMask* pockets = (StdDeck_CardMask*) malloc(sizeof(StdDeck_CardMask*) * hands->size);
   enum_result_t result;
   int count = 0;
   StdDeck_CardMask dead_temp = dead;
@@ -577,20 +585,21 @@ int enumerate(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
 
   finalize_results(hands, count, res, 0);
   enumResultFree(&result);
+  free(pockets);
   return 1;
 }
 
 int run_MC(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
            int nboard, int iters, Results* res) {
-  StdDeck_CardMask pockets[hands->size];
+  StdDeck_CardMask* pockets = (StdDeck_CardMask*) malloc(sizeof(StdDeck_CardMask*) * hands->size);
   enum_result_t result;
   StdDeck_CardMask dead_temp;
   int trials = 0;
+  int i, err;
   Hand_List* h = hands->hands;
   while (trials < iters) {
     dead_temp = dead;
-    int i;
-    int err = 0;
+    err = 0;
     // try to choose pocket cards for this trial
     for (i=0; i<hands->size; i++) {
       if (h->hand->dist_n > 1) {
@@ -637,29 +646,33 @@ int run_MC(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
   }
   finalize_results(hands, iters, res, 1);
   enumResultFree(&result);
+  free(pockets);
   return 1;
 }
 
 int calc(const char* hand_str, char* board_str, char* dead_str, int iters, Results* res) {
-  srand(time(NULL));
   StdDeck_CardMask board, dead;
+  int ndead, nboard, err;
+  Hands* hands;
+  unsigned long long coms;
+
+  srand(time(NULL));
   if (!extract_single_cards(dead_str, &dead)) {
     printf("calc: Improperly formatted dead cards %s\n", dead_str);
     return 0;
   }
-  int ndead = StdDeck_numCards(dead);
+  ndead = StdDeck_numCards(dead);
   if (!extract_single_cards(board_str, &board)) {
     printf("calc: Improperly formatted board cards %s\n", board_str);
     return 0;
   }
-  int nboard = StdDeck_numCards(board);
+  nboard = StdDeck_numCards(board);
   StdDeck_CardMask_OR(dead, dead, board);
 
-  Hands* hands;
   if ((hands = get_hands(hand_str, &dead)) == NULL) {
     return 0;
   }
-  unsigned long long coms = num_outcomes_UL(hands, nboard, ndead);
+  coms = num_outcomes_UL(hands, nboard, ndead);
 #ifdef VERBOSE
   print_hands(hands);
   printf("board: ");
@@ -671,7 +684,6 @@ int calc(const char* hand_str, char* board_str, char* dead_str, int iters, Resul
 #endif
   init_results(res, hands->size);
 
-  int err;
   if (coms > iters) {
     err = run_MC(hands, dead, board, nboard, iters, res);
   } else {

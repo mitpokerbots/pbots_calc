@@ -20,6 +20,7 @@ Hands* create_hands(int nhands) {
 
 void insert_hand(Hands* hands, Hand* hand) {
   Hand_List* h = (Hand_List*) malloc(sizeof(Hand_List));
+  Hand_Dist_Ptr* hdp;
   h->hand = hand;
   if (hands->size == 0) {
     h->next = h;
@@ -33,7 +34,7 @@ void insert_hand(Hands* hands, Hand* hand) {
     h->prev->next = h;
     hands->hands->prev = h;
   }
-  Hand_Dist_Ptr* hdp = (Hand_Dist_Ptr*) malloc(sizeof(Hand_Dist_Ptr));
+  hdp = (Hand_Dist_Ptr*) malloc(sizeof(Hand_Dist_Ptr));
   hdp->hand_dist = hand->hand_dist;
   hdp->start = hand->hand_dist;
   hdp->hand = hand;
@@ -72,9 +73,9 @@ void insert_hand_dist(Hand* hand, Hand_Dist* h) {
 
 // create and insert new hand_distribution entry of given cards
 void insert_new(StdDeck_CardMask cards, Hand* hand) {
-  Hand_Dist* new = (Hand_Dist*)malloc(sizeof(Hand_Dist));
-  new->cards = cards;
-  insert_hand_dist(hand, new);
+  Hand_Dist* new_hand_dist = (Hand_Dist*)malloc(sizeof(Hand_Dist));
+  new_hand_dist->cards = cards;
+  insert_hand_dist(hand, new_hand_dist);
 }
 
 void remove_hd(Hand_Dist* h) {
@@ -93,9 +94,9 @@ void remove_and_free(Hand_Dist* h) {
 }
 
 void print_hand_dist(Hand* hand) {
-  printf("HD(%d) [(",hand->dist_n);
   Hand_Dist* c = hand->hand_dist;
   int i;
+  printf("HD(%d) [(",hand->dist_n);
   for (i=0; i<hand->dist_n-1; i++) {
     DprintMask(StdDeck, c->cards);
     printf("),(");
