@@ -10,7 +10,7 @@ ccflags = ['-I.', '-MDd']
 if not sys.platform.startswith('win'):
     ccflags.extend(['-Wall', '-O3', '-Wpointer-arith'])
 env.Append(CCFLAGS=ccflags)
-env.Append(LINKFLAGS = ['-Wl','-g', '-O3'])
+env.Append(LINKFLAGS = ['-Wl', '-g', '-O3'])
 
 Export("env")
 

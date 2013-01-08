@@ -55,6 +55,7 @@ void choose(Hand* hand, StdDeck_CardMask* cards) {
   // Might consider using
   // http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT/index.html instead
   // of built in rand...
+  // Could also go backwards if i > hand->dist_n/2...
   for (i=rand()%hand->dist_n; i>=0; i--) {
     cur_h = cur_h->next;
   }
@@ -73,6 +74,18 @@ int choose_D(Hand* hand, StdDeck_CardMask dead, StdDeck_CardMask* cards) {
   }
   StdDeck_CardMask_RESET(*cards);
   return 0;
+}
+
+// Select 2 hole cards from hand of 3 cards - unset the discarded card in place!
+void choose_2(StdDeck_CardMask* three_pocket) {
+  int discard = rand()%3 + 1;
+  int i;
+  for (i=0; i<StdDeck_N_CARDS && discard > 0; i++) {
+    if (StdDeck_CardMask_CARD_IS_SET(*three_pocket, i)) {
+      discard--;
+    }
+  }
+  StdDeck_CardMask_UNSET(*three_pocket, i);
 }
 
 pocket_type get_pocket_type(const char* pocket) {
@@ -344,6 +357,8 @@ Hand* parse_pocket(const char* hand_text, StdDeck_CardMask dead) {
   char *str, *token, *str_save_ptr;
   char* hand_text_copy = strdup(hand_text);
   pocket_type p;
+  // make sure pocket distribution is consistent on number of hole cards
+  int num_cards = 0;
 #ifdef VERBOSE
   printf("parse_pocket %s\n",hand_text);
 #endif
@@ -355,6 +370,22 @@ Hand* parse_pocket(const char* hand_text, StdDeck_CardMask dead) {
 #ifdef VERBOSE
     printf("here3 %d\n", p);
 #endif
+    if (p == SINGULAR_3 || p == RAND_3) {
+      if (num_cards == 0) {
+        num_cards = 3;
+      } else if (num_cards != 3) {
+        err = 1;
+        break;
+      }
+    } else {
+      if (num_cards == 0) {
+        num_cards = 2;
+      } else if (num_cards != 2) {
+        err = 1;
+        break;
+      }
+    }
+
     if (p == SINGULAR || p == SINGULAR_3) {
       if (!extract_cards_singular(token, hand, dead)) {
         err = 1;
@@ -585,17 +616,26 @@ void finalize_results(Hands* hands, int iters, Results* res, int MC) {
 unsigned long long num_outcomes_UL(Hands* hands, int nboard, int ndead) {
   unsigned long long last = 1;
   unsigned long long total = 1;
-  int i, avail_cards;
+  int i;
+  int avail_cards = 52 - nboard - ndead;
   Hand_List* h = hands->hands;
+  // total *= product (taken over all dists) of (size of dist *
+  // (dist->num_hole_cards choose 2))
   do {
     total *= h->hand->dist_n;
     if (last > total) // overflow
       return ULLONG_MAX;
     last = total;
+    if (h->hand->num_hole_cards == 3) {
+      total *= 3;
+      if (last > total) // overflow
+        return ULLONG_MAX;
+      last = total;
+    }
+    avail_cards -= h->hand->num_hole_cards;
     h = h->next;
   } while (h != hands->hands);
-
-  avail_cards = 52 - (hands->size * 2) - nboard - ndead;
+  // total *= avail_cards choose (5-nboard)
   for (i=0; i<5-nboard; i++) {
     total *= avail_cards - i;
     if (last > total) // overflow
@@ -649,6 +689,7 @@ int enumerate(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
 int run_MC(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
            int nboard, int iters, Results* res) {
   StdDeck_CardMask* pockets = (StdDeck_CardMask*) malloc(sizeof(StdDeck_CardMask*) * hands->size);
+  StdDeck_CardMask temp_pocket;
   enum_result_t result;
   StdDeck_CardMask dead_temp;
   int trials = 0;
@@ -660,14 +701,18 @@ int run_MC(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
     // try to choose pocket cards for this trial
     for (i=0; i<hands->size; i++) {
       if (h->hand->dist_n > 1) {
-        if(!choose_D(h->hand, dead_temp, pockets+i)) {
+        if(!choose_D(h->hand, dead_temp, &temp_pocket)) {
           err=1;
           break;
         }
-        StdDeck_CardMask_OR(dead_temp, dead_temp, pockets[i]);
+        StdDeck_CardMask_OR(dead_temp, dead_temp, temp_pocket);
       } else {
-        pockets[i] = h->hand->hand_dist->cards;
+        temp_pocket = h->hand->hand_dist->cards;
       }
+      if (h->hand->num_hole_cards == 3) {
+        choose_2(&temp_pocket);
+      }
+      pockets[i] = temp_pocket;
       h = h->next;
     }
     if (err) {
