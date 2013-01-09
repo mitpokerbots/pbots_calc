@@ -21,19 +21,37 @@
 import os
 import sys
 
-env = Environment(TARGET_ARCH="x86")
+linkflags = ['-Wl', '-g', '-O3']
+ccflags = ['-I.', '-MDd']
+platform = sys.platform
+if not sys.platform.startswith('win'):
+    ccflags.extend(['-Wall', '-O3', '-Wpointer-arith'])
+
+include = "#export/%s/include" % platform
+lib = "#export/%s/lib" % platform
+bin = "#export/%s/bin" % platform
+
+ld_library_path = os.path.abspath(lib[1:])
+
+env = Environment(TARGET_ARCH = "x86",
+                  PLATFORM = platform,
+                  CCFLAGS = ccflags,
+                  LINKFLAGS = linkflags,
+                  BINDIR = bin,
+                  INCDIR = include,
+                  LIBDIR = lib,
+                  CPPPATH = [include],
+                  LIBPATH = [lib],
+                  LD_LIBRARY_PATH = ld_library_path)
+
 newpath=os.environ.get('PATH')
 env.Append(ENV = { 'PATH' : newpath })
 
-ccflags = ['-I.', '-MDd']
-if not sys.platform.startswith('win'):
-    ccflags.extend(['-Wall', '-O3', '-Wpointer-arith'])
-env.Append(CCFLAGS=ccflags)
-env.Append(LINKFLAGS = ['-Wl', '-g', '-O3'])
-
 Export("env")
 
-env.Alias('install', ['/usr/local'])
+#env.Alias('install', ['/usr/local'])
 env.Alias('build', ['.'])
 
-SConscript(["src/SConscript","example/SConscript","java/SConscript"],export="env")
+env.SConscript('src/SConscript', variant_dir='build/$PLATFORM', duplicate=0,
+               exports='env')
+env.SConscript(["example/SConscript","java/SConscript", "python/SConscript"], exports='env')

@@ -17,7 +17,13 @@
 # pbots_calc in a file in teh toplevel directory called "GPLv3".  If not, see
 # <http://www.gnu.org/licenses/>.
 #
+import os
 
-env = Environment()
+Import('env')
 env.Append(JAVACLASSPATH=["java/jnaerator-0.11-SNAPSHOT-20121008.jar"])
 env.Java('bin','.')
+
+with open(os.path.abspath("calculator.sh"),'w') as cmd:
+    cmd.write("#!/bin/sh\n")
+    cmd.write("export LD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH\n" % env['LD_LIBRARY_PATH'])
+    cmd.write("java -cp %s/jnaerator-0.11-SNAPSHOT-20121008.jar:%s/bin/ pbots_calc/Calculator $@" % (os.getcwd(), os.getcwd()) )

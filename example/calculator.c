@@ -18,7 +18,7 @@
  */
 
 #include <stdio.h>
-#include <pbots_calc/pbots_calc.h>
+#include "pbots_calc.h"
 
 /*
  * Simple command line tool for equity calculations. Demonstrates how to use the
