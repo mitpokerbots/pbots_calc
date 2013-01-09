@@ -1,4 +1,23 @@
+/**
+ * Copyright (C) 2012-2013 Owen Derby (ocderby@gmail.com)
+ *
+ * This file is part of pbots_calc.
+ *
+ * pbots_calc is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
+ *
+ * pbots_calc is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * pbots_calc in a file in teh toplevel directory called "GPLv3".  If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
 package pbots_calc;
+
 import org.bridj.BridJ;
 import org.bridj.CRuntime;
 import org.bridj.Pointer;
@@ -13,7 +32,7 @@ import org.bridj.ann.Runtime;
  * For help, please visit <a href="http://nativelibs4java.googlecode.com/">NativeLibs4Java</a> or <a href="http://bridj.googlecode.com/">BridJ</a> .
  */
 @Library("pbots_calc")
-@Runtime(CRuntime.class) 
+@Runtime(CRuntime.class)
 public class Pbots_calcLibrary {
 	static {
 		BridJ.register();
@@ -26,8 +45,8 @@ public class Pbots_calcLibrary {
 	public static Pointer<Pbots_calcResults > alloc_results() {
 		return Pointer.pointerToAddress(alloc_results$2(), Pbots_calcResults.class);
 	}
-	@Ptr 
-	@Name("alloc_results") 
+	@Ptr
+	@Name("alloc_results")
 	protected native static long alloc_results$2();
 	/**
 	 * Original signature : <code>void print_results(Results*)</code><br>

@@ -1,18 +1,23 @@
-equity-calculator
-=================
+pbots_calc: The Pokerbots Equity Calculator
+==========================================
 
-Ranged Equity Calculator
+Abstract: pbots_calc is a ranged Equity Calculator for use by anyone, but
+particularly poker bots in the MIT Pokerbots Competition! (mitpokerbots.com)
 
-Abstract: Open source implementation of something like pokerstove! For C, Java and Python!
+pbots_calc is a simple library for calculating the showdown equity for regular
+texas hold'em hands, with limited support for pineapple variants. It supports
+common 2-card hand range syntax (see documentation for full details), and
+handles any number of players. It's built in C, using the poker-eval library
+(http://pokersource.sourceforge.net/) for fast hand evaluation, and provides
+wrappers for python and java. It has reasonable speed, but there are certainly
+many areas for optimization and improvements.
 
-This is basically a pokerstove-esque equity calculator for regular texas
-hold'em. It handles mostly the same hand range-syntax as pokerstove, and handles
-any number of players. It's built around the poker-eval library, and provides
-python and java wrappers around the c library code. For comparison, my guess is
-that it runs about 10x slower than pokerstove, which isn't bad considering
-there's no lookup tables or anything.
+The pbots_calc library is Free Software and is released under the
+terms of the GNU General Public License. See the COPYING file in the
+root directory of the distribution.
 
-WARNING: Only tested on Ubuntu 12.04 - should work on 11.04 or later, but only guessing
+WARNING: Only tested on Ubuntu 12.04 - should work on 11.04 or later, but only
+guessing
 
 Linux Installation
 ==================
