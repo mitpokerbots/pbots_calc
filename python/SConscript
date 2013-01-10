@@ -21,7 +21,17 @@ import os
 
 Import('env')
 
-with open(os.path.abspath("calculator.sh"),'w') as cmd:
-    cmd.write("#!/bin/sh\n")
-    cmd.write("export LD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH\n" % env['LD_LIBRARY_PATH'])
+
+if env['PLATFORM'].startswith('win'):
+    fname = "calculator.bat"
+    ftext = "set PATH=\%PATH\%;%s\r\n" % env['LD_LIBRARY_PATH']
+elif env['PLATFORM'].startswith('darwin'):
+    fname = "calculator.sh"
+    ftext = "#!/bin/sh\nexport DYLD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH\n" % env['LD_LIBRARY_PATH']
+else:
+    fname = "calculator.sh"
+    ftext = "#!/bin/sh\nexport LD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH\n" % env['LD_LIBRARY_PATH']
+
+with open(os.path.abspath(fname),'w') as cmd:
+    cmd.write(ftext)
     cmd.write("python %s/calculator.py $@" % os.getcwd())
