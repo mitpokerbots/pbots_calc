@@ -549,17 +549,17 @@ Hands* get_hands(const char* hand_str, StdDeck_CardMask* dead) {
            hands->e_size, nhands);
     goto error;
   }
-
-  return hands;
-
+  goto success;
 error:
+  free_hands(hands);
+  hands = NULL;
+success:
+  free(hand);
   for (i=0; i<nhands; i++) {
     free(hand_strings[i]);
   }
   free(hand_strings);
-  free_hands(hands);
-  free(hand);
-  return NULL;
+  return hands;
 }
 
 // record intermediate results

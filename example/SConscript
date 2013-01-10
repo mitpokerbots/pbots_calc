@@ -25,7 +25,7 @@ calc_prog = str(calc_prog[0])
 
 if env['PLATFORM'].startswith('win'):
     fname = "calculator.bat"
-    ftext = "set PATH=\%PATH\%;%s\r\n" % env['LD_LIBRARY_PATH']
+    ftext = "set PATH=%%PATH%%;%s\r\n" % env['LD_LIBRARY_PATH']
 elif env['PLATFORM'].startswith('darwin'):
     fname = "calculator.sh"
     ftext = "#!/bin/sh\nexport DYLD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH\n" % env['LD_LIBRARY_PATH']

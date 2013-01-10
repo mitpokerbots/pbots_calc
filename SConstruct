@@ -21,7 +21,7 @@
 import os
 import sys
 
-linkflags = ['-Wl', '-g', '-O3']
+linkflags = ['-Wl', '-O3']
 ccflags = ['-I.', '-MDd']
 platform = sys.platform
 if not sys.platform.startswith('win'):
