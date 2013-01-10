@@ -21,11 +21,12 @@
 import os
 import sys
 
-linkflags = ['-Wl', '-O3']
+linkflags = ['-Wl', '-Ofast']
 ccflags = ['-I.', '-MDd']
 platform = sys.platform
+# need to do something like subprocess.call("vcvars32") on windows?
 if not sys.platform.startswith('win'):
-    ccflags.extend(['-Wall', '-O3', '-Wpointer-arith'])
+    ccflags.extend(['-Wall', '-Ofast', '-Wpointer-arith'])
 
 include = "#export/%s/include" % platform
 lib = "#export/%s/lib" % platform

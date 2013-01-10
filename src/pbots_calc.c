@@ -469,7 +469,7 @@ static inline int count_chars(const char* string, char *ch)
 Hands* get_hands(const char* hand_str, StdDeck_CardMask* dead) {
   const int nhands = count_chars(hand_str, ":")+1;
   char* hand_str_copy;
-  char** hand_strings = (char**) malloc(sizeof(char*) * nhands);
+  char** hand_strings = malloc(sizeof(char*) * nhands);
   int i;
   char *str, *token, *str_save_ptr;
   Hands* hands;
@@ -498,7 +498,7 @@ Hands* get_hands(const char* hand_str, StdDeck_CardMask* dead) {
     return NULL;
   }
 
- hand = (Hand**) malloc(sizeof(Hand*) * nhands);
+ hand = malloc(sizeof(Hand*) * nhands);
  hands = create_hands(nhands);
 
   // get all singular (non-ranged) hands
@@ -573,7 +573,7 @@ void accumulate_results(Hand_List* h, enum_result_t *result) {
 }
 
 Results* alloc_results() {
-  Results* res = (Results*)malloc(sizeof(Results));
+  Results* res = malloc(sizeof(Results));
   res->ev = NULL;
   res->hands = NULL;
   res->size = 0;
@@ -583,8 +583,8 @@ Results* alloc_results() {
 
 void init_results(Results* res, int nhands) {
   if (res->ev == NULL) {
-    res->ev = (double*)malloc(sizeof(double)*nhands);
-    res->hands = (char**)malloc(sizeof(char*)*nhands);
+    res->ev = malloc(sizeof(double)*nhands);
+    res->hands = malloc(sizeof(char*)*nhands);
     res->iters = 0;
     res->size = nhands;
   }
@@ -664,7 +664,7 @@ unsigned long long num_outcomes_UL(Hands* hands, int nboard, int ndead) {
 
 int enumerate(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
               int nboard, Results* res) {
-  StdDeck_CardMask* pockets = (StdDeck_CardMask*) malloc(sizeof(StdDeck_CardMask*) * hands->size);
+  StdDeck_CardMask* pockets = malloc(sizeof(StdDeck_CardMask) * hands->size);
   enum_result_t result;
   int count = 0;
   StdDeck_CardMask dead_temp = dead;
@@ -704,7 +704,7 @@ int enumerate(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
 
 int run_MC(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
            int nboard, int iters, Results* res) {
-  StdDeck_CardMask* pockets = (StdDeck_CardMask*) malloc(sizeof(StdDeck_CardMask*) * hands->size);
+  StdDeck_CardMask* pockets = malloc(sizeof(StdDeck_CardMask) * hands->size);
   StdDeck_CardMask temp_pocket;
   enum_result_t result;
   StdDeck_CardMask dead_temp;

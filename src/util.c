@@ -22,7 +22,7 @@
 #include "util.h"
 
 Hand* create_hand(void) {
-  Hand* hand = (Hand*)malloc(sizeof(Hand));
+  Hand* hand = malloc(sizeof(Hand));
   hand->dist_n = 0;
   hand->randomized = 0;
   hand->ev = 0.0;
@@ -31,15 +31,15 @@ Hand* create_hand(void) {
 }
 
 Hands* create_hands(int nhands) {
-  Hands* hands = (Hands*)malloc(sizeof(Hands));
+  Hands* hands = malloc(sizeof(Hands));
   hands->size = 0;
   hands->e_size = nhands;
-  hands->hand_ptrs = (Hand_Dist_Ptr**)malloc(sizeof(Hand_Dist_Ptr*) * nhands);
+  hands->hand_ptrs = malloc(sizeof(Hand_Dist_Ptr*) * nhands);
   return hands;
 }
 
 void insert_hand(Hands* hands, Hand* hand) {
-  Hand_List* h = (Hand_List*) malloc(sizeof(Hand_List));
+  Hand_List* h = malloc(sizeof(Hand_List));
   Hand_Dist_Ptr* hdp;
   h->hand = hand;
   if (hands->size == 0) {
@@ -54,7 +54,7 @@ void insert_hand(Hands* hands, Hand* hand) {
     h->prev->next = h;
     hands->hands->prev = h;
   }
-  hdp = (Hand_Dist_Ptr*) malloc(sizeof(Hand_Dist_Ptr));
+  hdp = malloc(sizeof(Hand_Dist_Ptr));
   hdp->hand_dist = hand->hand_dist;
   hdp->start = hand->hand_dist;
   hdp->hand = hand;
@@ -94,7 +94,7 @@ void insert_hand_dist(Hand* hand, Hand_Dist* h) {
 
 // create and insert new hand_distribution entry of given cards
 void insert_new(StdDeck_CardMask cards, Hand* hand) {
-  Hand_Dist* new_hand_dist = (Hand_Dist*)malloc(sizeof(Hand_Dist));
+  Hand_Dist* new_hand_dist = malloc(sizeof(Hand_Dist));
   new_hand_dist->cards = cards;
   insert_hand_dist(hand, new_hand_dist);
 }
