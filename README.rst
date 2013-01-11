@@ -55,11 +55,11 @@ Now you'll need to download, patch, and install the `poker-eval library`_:
 
 1. Download the source_ and extract it.
 
- a. You need to patch the source code: You can find the patch in this directory,
-    called ``poker-eval_patch.diff``. If you're in the poker-eval directory, you
-    can just ``patch -p0 < path/to/poker-eval_patch.diff``. This will fix an
-    ``#include`` typo and remove a bunch of unneeded folders from the build
-    path.
+   a. You need to patch the source code: You can find the patch in this
+      directory, called ``poker-eval_patch.diff``. If you're in the poker-eval
+      directory, you can just ``patch -p0 <
+      path/to/poker-eval_patch.diff``. This will fix an ``#include`` typo and
+      remove a bunch of unneeded folders from the build path.
 
 2. If not already installed, you'll need to grab the autoconf and libtool
    packages: ``sudo apt-get install autoconf libtool``
@@ -67,10 +67,10 @@ Now you'll need to download, patch, and install the `poker-eval library`_:
 3. Proceed according to the instructions in poker-eval/README. (summarized below
    for reference.
 
- a. ``autoreconf --install``
- b. ``./configure``
- c. ``make``
- d. (assuming no errors) ``sudo make install``
+   a. ``autoreconf --install``
+   b. ``./configure``
+   c. ``make``
+   d. (assuming no errors) ``sudo make install``
 
 Finally, to compile the pbots_calc library, just run ``scons`` from the
 pbots_calc directory. This will compile the pbots_calc library, the c example
@@ -109,24 +109,24 @@ Next, you'll need download, modify, compile, and install the `poker-eval library
 
 1. Download the source_
 
- a. You'll need to use 7-zip_ or similar to extract source code
+   a. You'll need to use 7-zip_ or similar to extract source code
 
 2. Use Microsoft Visual C++ 2010 Express to open the ``poker-eval.sln`` found in
    the source.
 
- a. Go to *Tools>Options>Projects and Solutions>Build and Run* and set the
- *maximum number of parallel project builds* to 1.
- b. Open *Includes>rules_std.h* in the project and change ``#include
-    <pokereval_export.h>`` to ``#include "pokereval_export.h"``
- c. Finally, right-click on the poker-eval project and select "build" - the
-    output console should not report any failures!
+   a. Go to *Tools>Options>Projects and Solutions>Build and Run* and set the
+      *maximum number of parallel project builds* to 1.
+   b. Open *Includes>rules_std.h* in the project and change ``#include
+      <pokereval_export.h>`` to ``#include "pokereval_export.h"``
+   c. Finally, right-click on the poker-eval project and select "build" - the
+      output console should not report any failures!
 
 3. Open a file explorer and navigate to the location of the poker-eval library.
 
- a. Navigate to the "Debug" directory and copy poker-eval.lib to __/VC/libs
- b. Also copy the all the contents, including the "inline" folder, to a new
-    folder called poker-eval in ``C:/Program Files (x86)/Microsof Visual Studio
-    10.0/VC/bin/VC/includes``
+   a. Navigate to the "Debug" directory and copy poker-eval.lib to __/VC/libs
+   b. Also copy the all the contents, including the "inline" folder, to a new
+      folder called poker-eval in ``C:/Program Files (x86)/Microsof Visual
+      Studio 10.0/VC/bin/VC/includes``
 
 Now, you should be able to build and install the pbots_calc library:
 
@@ -179,7 +179,7 @@ Examples
   hand of 4 hearts and queen spades against the jack spades and 9 hearts, with a
   board of ace spades, king clubs, and queen hearts.
 * ``calculator.sh 4qo:jts+`` will calculate pre-flop equities for the range of
- all 4-queen offsuit hands against all jack-ten or better suited hands.
+  all 4-queen offsuit hands against all jack-ten or better suited hands.
 * ``calculator.sh 6d8h:xxx 4c9d7ctskd 2c`` will calculate the post-river equity
   of a hand of 6 diamonds 8 hearts vs a random (unknown) 2-card hand with a full
   board and the 2 clubs discarded.
