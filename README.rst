@@ -52,15 +52,21 @@ First, make sure that you have gcc, python and scons installed. Installation
 should be as simple as ``sudo apt-get install gcc python scons``
 
 Now you'll need to download, patch, and install the `poker-eval library`_:
+
 1. Download the source_ and extract it.
+
  a. You need to patch the source code: You can find the patch in this directory,
- called ``poker-eval_patch.diff``. If you're in the poker-eval directory, you
- can just ``patch -p0 < path/to/poker-eval_patch.diff``. This will fix an
- ``#include`` typo and remove a bunch of unneeded folders from the build path.
+    called ``poker-eval_patch.diff``. If you're in the poker-eval directory, you
+    can just ``patch -p0 < path/to/poker-eval_patch.diff``. This will fix an
+    ``#include`` typo and remove a bunch of unneeded folders from the build
+    path.
+
 2. If not already installed, you'll need to grab the autoconf and libtool
-packages: ``sudo apt-get install autoconf libtool``
+   packages: ``sudo apt-get install autoconf libtool``
+
 3. Proceed according to the instructions in poker-eval/README. (summarized below
-for reference.
+   for reference.
+
  a. ``autoreconf --install``
  b. ``./configure``
  c. ``make``
@@ -87,34 +93,43 @@ Software you will need to have installed:
 1. `Python 2.7`_: Don't bother with 64 bit version. Required by scons.
 
 2. `Microsoft Visual C++ 2010 Express`_: Needed in order to compile
-calculator. After installing, you will need to add ``C:/Program Files
-(x86)/Microsof Visual Studio 10.0/VC/bin`` to your PATH (get help here_). You
-can check you did this right by opening a command prompt and typing "set PATH"
+   calculator. After installing, you will need to add ``C:/Program Files
+   (x86)/Microsof Visual Studio 10.0/VC/bin`` to your PATH (get help here_). You
+   can check you did this right by opening a command prompt and typing "set
+   PATH"
 
 3. Scons - get the latest windows installer for the production release (2.2.0 as
-of last update) from http://www.scons.org/download.php
+   of last update) from http://www.scons.org/download.php
 
 .. _`Python 2.7`: http://www.python.org/getit/
 .. _here: http://docs.oracle.com/javase/tutorial/essential/environment/paths.html
 .. _`Microsoft Visual C++ 2010 Express`: https://www.microsoft.com/visualstudio/eng/downloads
 
 Next, you'll need download, modify, compile, and install the `poker-eval library`_
+
 1. Download the source_
+
  a. You'll need to use 7-zip_ or similar to extract source code
+
 2. Use Microsoft Visual C++ 2010 Express to open the ``poker-eval.sln`` found in
-the source.
+   the source.
+
  a. Go to *Tools>Options>Projects and Solutions>Build and Run* and set the
-*maximum number of parallel project builds* to 1.
+ *maximum number of parallel project builds* to 1.
  b. Open *Includes>rules_std.h* in the project and change ``#include
- <pokereval_export.h>`` to ``#include "pokereval_export.h"``
+    <pokereval_export.h>`` to ``#include "pokereval_export.h"``
  c. Finally, right-click on the poker-eval project and select "build" - the
- output console should not report any failures!
+    output console should not report any failures!
+
 3. Open a file explorer and navigate to the location of the poker-eval library.
+
  a. Navigate to the "Debug" directory and copy poker-eval.lib to __/VC/libs
  b. Also copy the all the contents, including the "inline" folder, to a new
- folder called poker-eval in C:/Program Files (x86)/Microsof Visual Studio 10.0/VC/bin/VC/includes
+    folder called poker-eval in ``C:/Program Files (x86)/Microsof Visual Studio
+    10.0/VC/bin/VC/includes``
 
 Now, you should be able to build and install the pbots_calc library:
+
 1. Open a command prompt
 2. Navigate, by using the ``cd`` command, to the pbots_calc library folder.
 3. Run ``scons``.
@@ -140,6 +155,7 @@ optional and must either be 0, 3, 4 or 5 cards. You can specify 0 or more dead
 (discarded) cards.
 
 Sample 2-card hand ranges:
+
 * 8sTd - single hand range
 * 8sTd, 8sTc - 2 hand range
 * 8Ts - 4 hand range: [8sTs, 8cTc, 8dTd, 8hTh]
@@ -152,6 +168,7 @@ Sample 2-card hand ranges:
 
 3-card hand ranges are heard to specify. Currently you can only enumerate all
 the hands you mean, or specify random:
+
 * 8s9cTd,8s9cTh,8s9sTd,...
 * xxx = random (all possible 3-card hands)
 
@@ -161,10 +178,8 @@ Examples
 * ``calculator.sh 4hqd:js9h askcqh`` will calculate the post-flop equities for a
   hand of 4 hearts and queen spades against the jack spades and 9 hearts, with a
   board of ace spades, king clubs, and queen hearts.
-* ``calculator.sh 4qo:jts+`` will calculate pre-flop equities for the range of all
- 4-queen offsuit hands against all jack-ten or better suited hands.
-* ``calculator.sh 6d8h:xx 4c9d7ctskd 2c`` will calculate the post-river equity
+* ``calculator.sh 4qo:jts+`` will calculate pre-flop equities for the range of
+ all 4-queen offsuit hands against all jack-ten or better suited hands.
+* ``calculator.sh 6d8h:xxx 4c9d7ctskd 2c`` will calculate the post-river equity
   of a hand of 6 diamonds 8 hearts vs a random (unknown) 2-card hand with a full
   board and the 2 clubs discarded.
-* Replacing `xx` with `xxx` in the above example will compare to a random 3-card
-  hand.
