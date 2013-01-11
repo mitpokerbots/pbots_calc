@@ -42,9 +42,11 @@ typedef struct {
   int MC; // did we run Monte Carlo simulation?
 } Results;
 
+// Allocate, print, and free the results data structure
 EXPORT_DLL_FLAG Results* alloc_results(void);
 EXPORT_DLL_FLAG void print_results(Results*);
 EXPORT_DLL_FLAG void free_results(Results*);
+// Main library function - call equity calculator!
 EXPORT_DLL_FLAG int calc(const char*, char*, char*, int, Results*);
 
 #ifdef __cplusplus

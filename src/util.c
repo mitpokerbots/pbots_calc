@@ -21,10 +21,38 @@
 
 #include "util.h"
 
+int char2rank(char c) {
+  switch(toupper(c)) {
+    case '2': return StdDeck_Rank_2;
+    case '3': return StdDeck_Rank_3;
+    case '4': return StdDeck_Rank_4;
+    case '5': return StdDeck_Rank_5;
+    case '6': return StdDeck_Rank_6;
+    case '7': return StdDeck_Rank_7;
+    case '8': return StdDeck_Rank_8;
+    case '9': return StdDeck_Rank_9;
+    case 'T': return StdDeck_Rank_TEN;
+    case 'J': return StdDeck_Rank_JACK;
+    case 'Q': return StdDeck_Rank_QUEEN;
+    case 'K': return StdDeck_Rank_KING;
+    case 'A': return StdDeck_Rank_ACE;
+    default: return -1;
+  }
+}
+
+int char2suit(char c) {
+  switch(toupper(c)) {
+    case 'h': return StdDeck_Suit_HEARTS;
+    case 'd': return StdDeck_Suit_DIAMONDS;
+    case 'c': return StdDeck_Suit_CLUBS;
+    case 's': return StdDeck_Suit_SPADES;
+    default: return -1;
+  }
+}
+
 Hand* create_hand(void) {
   Hand* hand = malloc(sizeof(Hand));
   hand->dist_n = 0;
-  hand->randomized = 0;
   hand->ev = 0.0;
   hand->coms = 1;
   return hand;
@@ -169,6 +197,13 @@ void free_hands(Hands* hands) {
   free(hands);
 }
 
+// Here's where the confusing magic trickery happens for exhaustive enumeration.
+// Our method is to maintain a iterator over all the hand distributions,
+// implemented as a set of meta-pointers into each of the hand
+// distributions. This way, we only need to recurse to increment this "counter",
+// and we can perform an almost-normal looking iteration for the high-level
+// enumeration code.
+
 void incr_hand_ptr_r(Hands* hands, int hand_index) {
   if (hand_index < hands->size) {
     //printf("incrementing pointer index %d\n",hand_index);
@@ -187,7 +222,10 @@ void incr_hand_ptr(Hands* hands) {
   incr_hand_ptr_r(hands, 0);
 }
 
-// ptr is reset when it's at virtual 0
+// Since the counter (ptr) is not really well-defined, it's a bit complicated to
+// define when we've reached the "end" of our enumeration. We define it as once
+// we've looped back around to the very first set of hands we enumerated, which
+// is our "0" value for the counter.
 int ptr_iter_terminated(Hands* hands) {
   int i;
   for (i=0; i<hands->size; i++) {
@@ -212,6 +250,8 @@ void discard_card(StdDeck_CardMask* hand, int discard_index) {
   StdDeck_CardMask_UNSET(*hand, i-1);
 }
 
+// Retrieve the set of pocket cards corresponding to the current value of the
+// counter/pointer.
 int get_hand_set(Hands* hands, StdDeck_CardMask* dead, StdDeck_CardMask* pockets) {
   int i;
   for (i=0; i<hands->size; i++) {
