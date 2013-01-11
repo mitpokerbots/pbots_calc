@@ -33,7 +33,6 @@ if sys.platform.startswith('win'):
 else:
     pbots_calc = ctypes.util.find_library("pbots_calc")
 
-pcalc = ctypes.CDLL(pbots_calc)
 
 class _Results(ctypes.Structure):
     _fields_ = [("ev", ctypes.POINTER(ctypes.c_double)),
@@ -41,6 +40,14 @@ class _Results(ctypes.Structure):
                 ("iters", ctypes.c_int),
                 ("size", ctypes.c_int),
                 ("MC", ctypes.c_int)]
+
+# Set the argtype and return types from the library.
+pcalc = ctypes.CDLL(pbots_calc)
+pcalc.calc.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.POINTER(_Results)]
+pcalc.calc.restype = ctypes.c_int
+pcalc.alloc_results.argtypes = []
+pcalc.alloc_results.restype = ctypes.POINTER(_Results)
+
 
 class Results:
     def __init__(self, res):
@@ -52,6 +59,7 @@ class Results:
         for i in range(self.size):
             self.ev.append(res.ev[i])
             self.hands.append(res.hands[i])
+
     def __str__(self):
         return str(zip(self.hands, self.ev))
 
@@ -59,8 +67,7 @@ def calc(hands, board, dead, iters):
     res = pcalc.alloc_results()
     err = pcalc.calc(hands, board, dead, iters, res)
     if err > 0:
-        #pcalc.print_results(res)
-        results = Results(_Results.from_address(res))
+        results = Results(res[0])
     else:
         print "error: could not parse input or something..."
         results = None
