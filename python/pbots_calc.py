@@ -47,7 +47,8 @@ pcalc.calc.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes
 pcalc.calc.restype = ctypes.c_int
 pcalc.alloc_results.argtypes = []
 pcalc.alloc_results.restype = ctypes.POINTER(_Results)
-
+pcalc.free_results.argtypes = [ctypes.POINTER(_Results)]
+pcalc.free_results.restype = None
 
 class Results:
     def __init__(self, res):
