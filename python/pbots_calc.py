@@ -25,9 +25,15 @@ function provided by pbots_calc. Returns a Results object.
 """
 
 import ctypes
+import ctypes.util
+import sys
 
-peval = ctypes.CDLL('libpoker-eval.so')
-pcalc = ctypes.CDLL('libpbots_calc.so')
+if sys.platform.startswith('win'):
+    pbots_calc = "pbots_calc"
+else:
+    pbots_calc = ctypes.util.find_library("pbots_calc")
+
+pcalc = ctypes.CDLL(pbots_calc)
 
 class _Results(ctypes.Structure):
     _fields_ = [("ev", ctypes.POINTER(ctypes.c_double)),

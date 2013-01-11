@@ -27,15 +27,18 @@ if env['PLATFORM'].startswith('win'):
     fname = "calculator.bat"
     ftext = "set PATH=%%PATH%%;%s\r\n" % env['LD_LIBRARY_PATH']
     args = "%1"
+    path_sep = ";"
 elif env['PLATFORM'].startswith('darwin'):
     fname = "calculator.sh"
     ftext = "#!/bin/sh\nexport DYLD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH\n" % env['LD_LIBRARY_PATH']
     args = "$@"
+    path_sep = ":"
 else:
     fname = "calculator.sh"
     ftext = "#!/bin/sh\nexport LD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH\n" % env['LD_LIBRARY_PATH']
     args = "$@"
+    path_sep = ":"
 
 with open(os.path.abspath(fname),'w') as cmd:
     cmd.write(ftext)
-    cmd.write("java -cp %s/jnaerator-0.11-SNAPSHOT-20121008.jar:%s/bin/ pbots_calc/Calculator %s" % (os.getcwd(), os.getcwd(), args) )
+    cmd.write("java -cp %s%s%s pbots_calc.Calculator %s" % (os.path.abspath('jnaerator-0.11-SNAPSHOT-20121008.jar'), path_sep, os.path.abspath('bin'), args))
