@@ -85,8 +85,14 @@ each of the examples (more below).
 Mac OSX Installation
 ^^^^^^^^^^^^^^^^^^^^
 
-Just follow the linux instructions. You'll likely need to manually install the
-tools you'll need, but that shouldn't be too hard.
+1. Follow step 1 from the Linux installation.
+
+2.
+   a. `Install homebrew<http://mxcl.github.com/homebrew/>`_.
+   b. If not already installed, you need to grab the autoconf and libtool
+      packages: ``brew install autoconf libtool``
+
+3. Follow step 3 and onwards from the Linux installation
 
 Windows Installation
 ^^^^^^^^^^^^^^^^^^^^
