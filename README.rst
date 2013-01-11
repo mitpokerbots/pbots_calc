@@ -88,7 +88,7 @@ Mac OSX Installation
 1. Follow step 1 from the Linux installation.
 
 2.
-   a. `Install homebrew<http://mxcl.github.com/homebrew/>`_.
+   a. Install `homebrew <http://mxcl.github.com/homebrew/>`_.
    b. If not already installed, you need to grab the autoconf and libtool
       packages: ``brew install autoconf libtool``
 
@@ -117,26 +117,29 @@ Software you will need to have installed:
 
 Next, you'll need download, modify, compile, and install the `poker-eval library`_
 
-1. Download the source_
-
-   a. You'll need to use 7-zip_ or similar to extract source code
+1. Download the source_. You'll need to use 7-zip_ or similar to extract source code
 
 2. Use Microsoft Visual C++ 2010 Express to open the ``poker-eval.sln`` found in
    the source.
 
-   a. You'll be prompted to convert the "old" solution to a newer version - just do what it wants and click "Finish".
-   a. Go to *Tools>Options>Projects and Solutions>Build and Run* and set the
+   a. You'll be prompted to convert the "old" solution to a newer version - just
+      do what it wants and click "Finish".
+   #. Go to *Tools>Options>Projects and Solutions>Build and Run* and set the
       *maximum number of parallel project builds* to 1.
-   b. Open *poker-eval/Header Files/rules_std.h* in the project and change ``#include
+   #. Open *poker-eval/Header Files/rules_std.h* in the project and change ``#include
       <pokereval_export.h>`` to ``#include "pokereval_export.h"`` and save it.
-   b. Ensure you are set to build a "Release" version (and not "Debug") by selecting "Release" from the drop down menu next to the "run" button (should be right below the help menu).
-   c. Finally, right-click on the poker-eval project and select "build" - the
+   #. Ensure you are set to build a "Release" version (and not "Debug") by
+      selecting "Release" from the drop down menu next to the "run" button
+      (should be right below the help menu).
+   #. Finally, right-click on the poker-eval project and select "build" - the
       output console should not report any failures!
 
-3. Open a file explorer and navigate to the location of the poker-eval library you downloaded (and just built).
+3. Open a file explorer and navigate to the location of the poker-eval library
+   you downloaded (and just built).
 
-   a. Navigate to the "Release" directory and copy the file "poker-eval.lib" to ``C:/Program Files
-   (x86)/Microsof Visual Studio 10.0/VC/libs``
+   a. Navigate to the "Release" directory and copy the file "poker-eval.lib" to
+      ``C:/Program Files (x86)/Microsof Visual Studio 10.0/VC/libs``
+
    b. Also copy the all the contents, including the "inline" folder, to a new
       folder called poker-eval in ``C:/Program Files (x86)/Microsof Visual
       Studio 10.0/VC/bin/VC/includes``
