@@ -36,11 +36,14 @@ After following the instructions for your OS, you will be left with the compiled
 library in the pbots_calc directory, under export/*your OS type*/lib and include
 folders.
 
-I'll breifly list here what's working and what's not:
-
-* Linux: all good
-* Mac OSX: I think it works...?
-* Windows: C and python should work, java still complaining
+The final note regarding 32-bit vs 64-bit platforms and this library. I have
+only really tested this extensively as a 32-bit library, for use with 32-bit
+python and 32-bit java. So I would say that if you're in doubt or not sure what
+you're doing, just stick with 32-bit installs (even if you have a 64-bit
+system - it will still work!). However, there's nothing prohibiting this from
+working with 64-bit tools (we've confirmed it worked on a mac), so feel free to
+try. However, these instructions were written for 32-bit tools (c compiler,
+java, and python).
 
 .. _python: http://www.python.org/getit/
 .. _scons: http://www.scons.org/download.php
@@ -82,8 +85,8 @@ each of the examples (more below).
 Mac OSX Installation
 ^^^^^^^^^^^^^^^^^^^^
 
-You're on your own. Try following the linux instructions (using whatever c
-compiler mac's use...)
+Just follow the linux instructions. You'll likely need to manually install the
+tools you'll need, but that shouldn't be too hard.
 
 Windows Installation
 ^^^^^^^^^^^^^^^^^^^^
@@ -98,12 +101,13 @@ Software you will need to have installed:
    can check you did this right by opening a command prompt and typing "set
    PATH"
 
-3. Scons - get the latest windows installer for the production release (2.2.0 as
-   of last update) from http://www.scons.org/download.php
+3. Scons_ - get the latest windows installer for the production release (2.2.0 as
+   of last update)
 
 .. _`Python 2.7`: http://www.python.org/getit/
 .. _here: http://docs.oracle.com/javase/tutorial/essential/environment/paths.html
 .. _`Microsoft Visual C++ 2010 Express`: https://www.microsoft.com/visualstudio/eng/downloads
+.. _Scons: http://www.scons.org/download.php
 
 Next, you'll need download, modify, compile, and install the `poker-eval library`_
 
@@ -114,16 +118,19 @@ Next, you'll need download, modify, compile, and install the `poker-eval library
 2. Use Microsoft Visual C++ 2010 Express to open the ``poker-eval.sln`` found in
    the source.
 
+   a. You'll be prompted to convert the "old" solution to a newer version - just do what it wants and click "Finish".
    a. Go to *Tools>Options>Projects and Solutions>Build and Run* and set the
       *maximum number of parallel project builds* to 1.
-   b. Open *Includes>rules_std.h* in the project and change ``#include
-      <pokereval_export.h>`` to ``#include "pokereval_export.h"``
+   b. Open *poker-eval/Header Files/rules_std.h* in the project and change ``#include
+      <pokereval_export.h>`` to ``#include "pokereval_export.h"`` and save it.
+   b. Ensure you are set to build a "Release" version (and not "Debug") by selecting "Release" from the drop down menu next to the "run" button (should be right below the help menu).
    c. Finally, right-click on the poker-eval project and select "build" - the
       output console should not report any failures!
 
-3. Open a file explorer and navigate to the location of the poker-eval library.
+3. Open a file explorer and navigate to the location of the poker-eval library you downloaded (and just built).
 
-   a. Navigate to the "Debug" directory and copy poker-eval.lib to __/VC/libs
+   a. Navigate to the "Release" directory and copy the file "poker-eval.lib" to ``C:/Program Files
+   (x86)/Microsof Visual Studio 10.0/VC/libs``
    b. Also copy the all the contents, including the "inline" folder, to a new
       folder called poker-eval in ``C:/Program Files (x86)/Microsof Visual
       Studio 10.0/VC/bin/VC/includes``

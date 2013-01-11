@@ -25,7 +25,7 @@ env.Java('bin','.')
 
 if env['PLATFORM'].startswith('win'):
     fname = "calculator.bat"
-    ftext = "set PATH=%%PATH%%;%s\r\n" % env['LD_LIBRARY_PATH']
+    ftext = "@set PATH=%%PATH%%;%s\r\n" % env['LD_LIBRARY_PATH']
     args = "%1"
     path_sep = ";"
 elif env['PLATFORM'].startswith('darwin'):
