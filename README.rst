@@ -82,8 +82,14 @@ each of the examples (more below).
 Mac OSX Installation
 ^^^^^^^^^^^^^^^^^^^^
 
-You're on your own. Try following the linux instructions (using whatever c
-compiler mac's use...)
+1. Follow step 1 from the Linux installation.
+
+2. 
+   a. `Install homebrew<http://mxcl.github.com/homebrew/>`_.
+   b. If not already installed, you need to grab the autoconf and libtool
+      packages: ``brew install autoconf libtool``
+
+3. Follow step 3 from the Linux installation
 
 Windows Installation
 ^^^^^^^^^^^^^^^^^^^^
