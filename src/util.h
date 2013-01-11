@@ -36,7 +36,6 @@ typedef struct h_dist {
 typedef struct {
   Hand_Dist* hand_dist;
   int dist_n;
-  int randomized;
   double ev;
   char* text;
   // How many combinations of 2-card hands are contained in this hand? (either 1
@@ -44,6 +43,8 @@ typedef struct {
   int coms;
 } Hand;
 
+// For exhaustive enumeration, we use this meta-pointer to keep
+// track of the next set of hand to try in a given hand range.
 typedef struct {
   Hand_Dist* hand_dist;
   Hand_Dist* start;
@@ -71,34 +72,8 @@ typedef struct {
   Hand_Dist_Ptr** hand_ptrs;
 } Hands;
 
-static int char2rank(char c) {
-  switch(toupper(c)) {
-    case '2': return StdDeck_Rank_2;
-    case '3': return StdDeck_Rank_3;
-    case '4': return StdDeck_Rank_4;
-    case '5': return StdDeck_Rank_5;
-    case '6': return StdDeck_Rank_6;
-    case '7': return StdDeck_Rank_7;
-    case '8': return StdDeck_Rank_8;
-    case '9': return StdDeck_Rank_9;
-    case 'T': return StdDeck_Rank_TEN;
-    case 'J': return StdDeck_Rank_JACK;
-    case 'Q': return StdDeck_Rank_QUEEN;
-    case 'K': return StdDeck_Rank_KING;
-    case 'A': return StdDeck_Rank_ACE;
-    default: return -1;
-  }
-}
-
-static int char2suit(char c) {
-  switch(toupper(c)) {
-    case 'h': return StdDeck_Suit_HEARTS;
-    case 'd': return StdDeck_Suit_DIAMONDS;
-    case 'c': return StdDeck_Suit_CLUBS;
-    case 's': return StdDeck_Suit_SPADES;
-    default: return -1;
-  }
-}
+int char2rank(char);
+int char2suit(char c);
 
 Hand* create_hand(void);
 Hands* create_hands(int);

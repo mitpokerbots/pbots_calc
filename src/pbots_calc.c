@@ -39,35 +39,8 @@ typedef enum {
   NONE
 } pocket_type;
 
-// given a hand, generate a random permutation, IN PLACE.
-// Conceptually, this is done by randomly creating a new linked list from the
-// nodes of the current linked list by iterating hand->dist_n times, selecting a
-// random node from the current linked list and removing it and inserting into
-// the new list.
-void randomize(Hand* hand) {
-  Hand_Dist* cur_h = hand->hand_dist;
-  Hand_Dist* next_h;
-
-  // perform operation in place, so start by tricking hand into thinking it's
-  // empty
-  int j = hand->dist_n;
-  int i = 0;
-  hand->dist_n = 0;
-
-  for (; j>0; j--) {
-    for (i=rand()%j; i>=0; i--) {
-      cur_h = cur_h->next;
-    }
-    // keep reference to "old" linked_list
-    next_h = cur_h->next;
-    remove_hd(cur_h);
-    insert_hand_dist(hand, cur_h);
-    // move back to "old" linked_list and continue
-    cur_h = next_h;
-  }
-  hand->randomized = 1;
-}
-
+// Given a hand range, randomly select a set of cards from it.
+// TODO: speed this up!
 void choose(Hand* hand, StdDeck_CardMask* cards) {
   Hand_Dist* cur_h = hand->hand_dist;
   int i;
@@ -83,6 +56,9 @@ void choose(Hand* hand, StdDeck_CardMask* cards) {
   *cards = cur_h->cards;
 }
 
+// Given a hand range and a set of dead cards, try to select a set of cards from
+// it that aren't already discarded. Might not be possible. On success, set
+// cards and return 1, and on failure, reset cards and return 0.
 int choose_D(Hand* hand, StdDeck_CardMask dead, StdDeck_CardMask* cards) {
   int i;
   for (i=0; i<10; i++) {
@@ -100,6 +76,7 @@ void choose_2(StdDeck_CardMask* three_pocket) {
   discard_card(three_pocket, rand()%3 + 1);
 }
 
+// Parse string specifying hand range and return what type it is.
 pocket_type get_pocket_type(const char* pocket) {
   size_t n_p = strlen(pocket);
   unsigned int i, j;
@@ -363,6 +340,8 @@ int extract_cards_offsuit(char* cards, Hand* hand, StdDeck_CardMask dead) {
   return 1;
 }
 
+// Given a hand string, create the complete range of hole cards, taking into
+// account already discarded cards.
 Hand* parse_pocket(const char* hand_text, StdDeck_CardMask dead) {
   Hand* hand = create_hand();
   int err = 0;
@@ -466,6 +445,7 @@ static inline int count_chars(const char* string, char *ch)
   return count;
 }
 
+// Extract all hands from single hand_str
 Hands* get_hands(const char* hand_str, StdDeck_CardMask* dead) {
   const int nhands = count_chars(hand_str, ":")+1;
   char* hand_str_copy;
@@ -614,6 +594,7 @@ void print_results(Results* res) {
   }
 }
 
+// After simulation, collate results and compute the final equity.
 void finalize_results(Hands* hands, int iters, Results* res, int MC) {
   int i;
   Hand_List* h = hands->hands;
@@ -626,6 +607,7 @@ void finalize_results(Hands* hands, int iters, Results* res, int MC) {
   }
 }
 
+// Compute a rough upper-bound estimate on the number of possible hands
 // nboard is the number of cards on the board
 // ndead is the number of cards that are dead, not including those in hands or
 // on the board.
@@ -662,6 +644,7 @@ unsigned long long num_outcomes_UL(Hands* hands, int nboard, int ndead) {
   return (total < last) ? ULLONG_MAX : total;
 }
 
+// Compute equities via exhaustive enumeration
 int enumerate(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
               int nboard, Results* res) {
   StdDeck_CardMask* pockets = malloc(sizeof(StdDeck_CardMask) * hands->size);
@@ -702,6 +685,7 @@ int enumerate(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
   return 1;
 }
 
+// Compute equities via Monte Carlo simulation
 int run_MC(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
            int nboard, int iters, Results* res) {
   StdDeck_CardMask* pockets = malloc(sizeof(StdDeck_CardMask) * hands->size);
@@ -768,6 +752,24 @@ int run_MC(Hands* hands, StdDeck_CardMask dead, StdDeck_CardMask board,
   return 1;
 }
 
+/**
+ * Main entry method, specifying hands, board, dead, max iterations, and pointer
+ * to struct to store results in.
+ *
+ * Input:
+ *   hand_str: colon separated list of hands (possibly ranged). A hand can be
+ *             composed of several ranges, separated by commas.
+ *   board_str: string of 0, 3, 4, or 5 board cards (anything else is an error)
+ *   dead_str: string of any dead cards (cards which are known to have been
+ *             discarded)
+ *   iters: maximum number of iterations to run for. If we think enumeration
+ *          will take less than iters, run exhaustive enumeration. Otherwise,
+ *          run Monte Carlo Simulation.
+ *   res: pointer to Results (allocated with alloc_results) where the equities
+ *        and other result-information should be stored.
+ * Return:
+ *   error code - 0 indicates failure, 1 indicates success
+ */
 int calc(const char* hand_str, char* board_str, char* dead_str, int iters, Results* res) {
   StdDeck_CardMask board, dead;
   int ndead, nboard, err;
