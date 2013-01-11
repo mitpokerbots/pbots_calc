@@ -31,7 +31,7 @@ if sys.platform.startswith('win'):
     linkflags.extend(['-OPT:REF', '-OPT:ICF', '-NOLOGO'])
     ccflags.extend(['-W3', '-Ox', '-nologo'])
 else:
-    linkflags.extend(['-Wl', '-O3'])
+    linkflags.extend(['-O3'])
     ccflags.extend(['-Wall', '-O3', '-Wpointer-arith'])
 
 include = "#export/%s/include" % platform
