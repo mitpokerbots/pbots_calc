@@ -191,7 +191,9 @@ int extract_cards_singular(char* cards, Hand* hand, StdDeck_CardMask dead) {
     hand->coms = 3;
   }
   if (StdDeck_CardMask_ANY_SET(dead, pocket)) {
+#ifdef VERBOSE
     printf("R1: in dead cards\n");
+#endif
     return 1;
   }
   insert_new(pocket, hand);

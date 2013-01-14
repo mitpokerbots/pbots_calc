@@ -37,3 +37,5 @@ else:
 with open(os.path.abspath(fname),'w') as cmd:
     cmd.write(ftext)
     cmd.write("python %s %s" % (os.path.abspath("calculator.py"), args))
+
+Execute(Chmod(os.path.abspath(fname), 0755))

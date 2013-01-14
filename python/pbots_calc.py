@@ -30,9 +30,10 @@ import sys
 
 if sys.platform.startswith('win'):
     pbots_calc = "pbots_calc"
+elif sys.platform.startswith('darwin'):
+    pbots_calc = "libpbots_calc.dylib"
 else:
-    pbots_calc = ctypes.util.find_library("pbots_calc")
-
+    pbots_calc = "libpbots_calc.so"
 
 class _Results(ctypes.Structure):
     _fields_ = [("ev", ctypes.POINTER(ctypes.c_double)),
@@ -41,8 +42,13 @@ class _Results(ctypes.Structure):
                 ("size", ctypes.c_int),
                 ("MC", ctypes.c_int)]
 
+try:
+    pcalc = ctypes.CDLL(pbots_calc)
+except OSError:
+    print "ERROR: Could not locate %s. Please ensure your enviroment library load path is set properly." % pbots_calc
+    sys.exit(1)
+
 # Set the argtype and return types from the library.
-pcalc = ctypes.CDLL(pbots_calc)
 pcalc.calc.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.POINTER(_Results)]
 pcalc.calc.restype = ctypes.c_int
 pcalc.alloc_results.argtypes = []

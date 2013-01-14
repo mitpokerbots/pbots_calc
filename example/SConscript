@@ -39,3 +39,5 @@ else:
 with open(os.path.abspath(fname),'w') as cmd:
     cmd.write(ftext)
     cmd.write("%s %s\n" % (os.path.abspath(calc_prog), args))
+
+Execute(Chmod(os.path.abspath(fname), 0755))
