@@ -138,11 +138,11 @@ Next, you'll need download, modify, compile, and install the `poker-eval library
    you downloaded (and just built).
 
    a. Navigate to the "Release" directory and copy the file "poker-eval.lib" to
-      ``C:/Program Files (x86)/Microsof Visual Studio 10.0/VC/libs``
+      ``C:/Program Files (x86)/Microsof Visual Studio 10.0/VC/lib``
 
-   b. Also copy the all the contents, including the "inline" folder, to a new
-      folder called poker-eval in ``C:/Program Files (x86)/Microsof Visual
-      Studio 10.0/VC/bin/VC/includes``
+   b. Also copy the all the contents from the ``include`` folder in the poker-eval library, including the "inline" folder, to a new
+      folder called ``poker-eval`` in ``C:/Program Files (x86)/Microsof Visual
+      Studio 10.0/VC/include``
 
 Now, you should be able to build and install the pbots_calc library:
 
