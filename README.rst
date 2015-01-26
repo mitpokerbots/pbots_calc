@@ -103,7 +103,7 @@ Software you will need to have installed:
 
 2. `Microsoft Visual C++ 2010 Express`_: Needed in order to compile
    calculator. After installing, you will need to add ``C:/Program Files
-   (x86)/Microsof Visual Studio 10.0/VC/bin`` to your PATH (get help here_). You
+   (x86)/Microsoft Visual Studio 10.0/VC/bin`` to your PATH (get help here_). You
    can check you did this right by opening a command prompt and typing "set
    PATH"
 
