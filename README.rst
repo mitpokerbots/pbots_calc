@@ -80,7 +80,7 @@ pbots_calc directory. This will compile the pbots_calc library, the c example
 code, and the java example code. It will also create calculator.sh scripts for
 each of the examples (more below).
 
-.. _source: http://download.gna.org/pokersource/sources/poker-eval-138.0.tar.gz
+.. _source: http://deb.debian.org/debian/pool/main/p/poker-eval/poker-eval_138.0.orig.tar.gz
 
 Mac OSX Installation
 ^^^^^^^^^^^^^^^^^^^^
