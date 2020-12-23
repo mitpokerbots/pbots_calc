@@ -192,7 +192,7 @@ Examples
 ^^^^^^^^
 
 * ``calculator.sh 4hqd:js9h askcqh`` will calculate the post-flop equities for a
-  hand of 4 hearts and queen spades against the jack spades and 9 hearts, with a
+  hand of 4 hearts and queen diamonds against the jack spades and 9 hearts, with a
   board of ace spades, king clubs, and queen hearts.
 * ``calculator.sh 4qo:jts+`` will calculate pre-flop equities for the range of
   all 4-queen offsuit hands against all jack-ten or better suited hands.
