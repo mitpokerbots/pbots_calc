@@ -4,6 +4,8 @@ pbots_calc
 The Pokerbots Equity Calculator
 -------------------------------
 
+NOTE: this codebase is no longer maintained or supported by the MIT Pokerbots competition.
+
 Introduction
 ############
 
